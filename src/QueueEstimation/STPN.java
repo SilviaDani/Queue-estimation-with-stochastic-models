@@ -36,7 +36,6 @@ import java.util.*;
 public class STPN<R,S> {
     protected int servers;
     protected int clients;
-    protected LocalDateTime now;
 
     public STPN(int servers, int clients) {
         this.servers = servers;

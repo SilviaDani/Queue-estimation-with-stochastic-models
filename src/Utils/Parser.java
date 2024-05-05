@@ -29,7 +29,7 @@ public class Parser {
         return false;
     }
 
-    public static void parse(String filename){ //TODO add a return type
+    public static void parse(String filename, int nServers){ //TODO add a return type
         ArrayList<Event> events = new ArrayList<>();
         try{
             BufferedReader reader = new BufferedReader(new FileReader(filename));
@@ -49,10 +49,17 @@ public class Parser {
                     Logger.debug("Transition fired: " + line.trim() + " @ " + currentTime +"/" +currentETAs.get(line.trim()));
                     //check if the transition is a SkipTransition transition or a [First]Service transition and creates the corresponding event
                     String serverID = line.trim().replaceAll("[^0-9]", "");
-                    if(line.trim().startsWith("SkipTransition")){
-                        events.add(new LeaveQueue(currentTime, serverID, "0"));
-                    }else if(line.trim().startsWith("Service") || line.trim().startsWith("FirstService")){
-                        events.add(new EndService(currentTime, serverID, "0"));
+                    int firstClients = - nServers;
+                    int clients = 0;
+                    if(line.trim().startsWith("ToBeServed")){
+                        clients++;
+                    }else if(line.trim().startsWith("SkipTransition")){
+                        events.add(new LeaveQueue(currentTime, serverID, String.valueOf(clients)));
+                    }else if(line.trim().startsWith("Service")){
+                        events.add(new EndService(currentTime, serverID, String.valueOf(clients)));
+                    }else if(line.trim().startsWith("FirstService")){
+                        events.add(new EndService(currentTime, serverID, String.valueOf(firstClients)));
+                        firstClients++;
                     }
                     currentETAs.clear();
                 }
