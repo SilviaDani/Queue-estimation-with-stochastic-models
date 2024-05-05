@@ -3,6 +3,7 @@ package Utils;
 import QueueEstimation.EndService;
 import QueueEstimation.Event;
 import QueueEstimation.LeaveQueue;
+import QueueEstimation.StartService;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -31,12 +32,15 @@ public class Parser {
 
     public static void parse(String filename, int nServers){ //TODO add a return type
         ArrayList<Event> events = new ArrayList<>();
+        HashMap<String, Integer> clientCounter = new HashMap<>();
         try{
             BufferedReader reader = new BufferedReader(new FileReader(filename));
             String line = reader.readLine();
             double currentTime = 0.0;
             HashMap<String, String> currentETAs = new HashMap<>();
             boolean isParentSection = false;
+            int firstClients = - nServers;
+            int clients = 0;
             while (line != null){
                 if(line.trim().equals("-- Parent --")){
                     isParentSection = true;
@@ -49,14 +53,15 @@ public class Parser {
                     Logger.debug("Transition fired: " + line.trim() + " @ " + currentTime +"/" +currentETAs.get(line.trim()));
                     //check if the transition is a SkipTransition transition or a [First]Service transition and creates the corresponding event
                     String serverID = line.trim().replaceAll("[^0-9]", "");
-                    int firstClients = - nServers;
-                    int clients = 0;
-                    if(line.trim().startsWith("ToBeServed")){
+                    if(line.trim().startsWith("Call")) {
+                        clientCounter.put(serverID, clients);
                         clients++;
+                    }else if(line.trim().startsWith("ToBeServed")){
+                        events.add(new StartService(currentTime, serverID, String.valueOf(clientCounter.get(serverID))));
                     }else if(line.trim().startsWith("SkipTransition")){
-                        events.add(new LeaveQueue(currentTime, serverID, String.valueOf(clients)));
+                        events.add(new LeaveQueue(currentTime, serverID, String.valueOf(clientCounter.get(serverID))));
                     }else if(line.trim().startsWith("Service")){
-                        events.add(new EndService(currentTime, serverID, String.valueOf(clients)));
+                        events.add(new EndService(currentTime, serverID, String.valueOf(clientCounter.get(serverID))));
                     }else if(line.trim().startsWith("FirstService")){
                         events.add(new EndService(currentTime, serverID, String.valueOf(firstClients)));
                         firstClients++;
