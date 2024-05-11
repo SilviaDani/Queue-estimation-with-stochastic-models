@@ -30,9 +30,13 @@ public class Parser {
         return false;
     }
 
-    public static void parse(String filename, int nServers){ //TODO add a return type
+    public static ArrayList<Event> parse(String filename, int nServers){ //TODO add a return type
         ArrayList<Event> events = new ArrayList<>();
         HashMap<String, Integer> clientCounter = new HashMap<>();
+        HashMap<String, Double> entranceTimes = new HashMap<>();
+        for (int i = 0; i < nServers; i++){
+            entranceTimes.put(String.valueOf(i+1), 0.0);
+        }
         try{
             BufferedReader reader = new BufferedReader(new FileReader(filename));
             String line = reader.readLine();
@@ -50,20 +54,22 @@ public class Parser {
                     isParentSection = false;
                     line = reader.readLine(); // the transition actually fired
                     currentTime += Double.parseDouble(currentETAs.get(line.trim()));
-                    Logger.debug("Transition fired: " + line.trim() + " @ " + currentTime +"/" +currentETAs.get(line.trim()));
+                    Logger.debug("Transition fired: " + line.trim() + " @ " + currentTime +"/" + Double.parseDouble(currentETAs.get(line.trim())));
                     //check if the transition is a SkipTransition transition or a [First]Service transition and creates the corresponding event
                     String serverID = line.trim().replaceAll("[^0-9]", "");
                     if(line.trim().startsWith("Call")) {
                         clientCounter.put(serverID, clients);
                         clients++;
                     }else if(line.trim().startsWith("ToBeServed")){
-                        events.add(new StartService(currentTime, serverID, String.valueOf(clientCounter.get(serverID))));
+                        events.add(new StartService(currentTime,currentTime - entranceTimes.get(serverID), serverID, String.valueOf(clientCounter.get(serverID))));
                     }else if(line.trim().startsWith("SkipTransition")){
-                        events.add(new LeaveQueue(currentTime, serverID, String.valueOf(clientCounter.get(serverID))));
+                        events.add(new LeaveQueue(currentTime, currentTime - entranceTimes.get(serverID), serverID, String.valueOf(clientCounter.get(serverID))));
                     }else if(line.trim().startsWith("Service")){
-                        events.add(new EndService(currentTime, serverID, String.valueOf(clientCounter.get(serverID))));
+                        events.add(new EndService(currentTime, currentTime - entranceTimes.get(serverID), serverID, String.valueOf(clientCounter.get(serverID))));
+                        entranceTimes.put(serverID, currentTime);
                     }else if(line.trim().startsWith("FirstService")){
-                        events.add(new EndService(currentTime, serverID, String.valueOf(firstClients)));
+                        events.add(new EndService(currentTime,currentTime - entranceTimes.get(serverID), serverID, String.valueOf(firstClients)));
+                        entranceTimes.put(serverID, currentTime);
                         firstClients++;
                     }
                     currentETAs.clear();
@@ -79,5 +85,6 @@ public class Parser {
         for(Event e : events){
             Logger.debug(e.toString());
         }
+        return events;
     }
 }
