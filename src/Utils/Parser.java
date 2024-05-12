@@ -30,7 +30,7 @@ public class Parser {
         return false;
     }
 
-    public static ArrayList<Event> parse(String filename, int nServers){ //TODO add a return type
+    public static ArrayList<Event> parse(String filename, int nServers){
         ArrayList<Event> events = new ArrayList<>();
         HashMap<String, Integer> clientCounter = new HashMap<>();
         HashMap<String, Double> entranceTimes = new HashMap<>();

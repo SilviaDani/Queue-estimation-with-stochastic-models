@@ -62,7 +62,7 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
     }
 
     public void computeParameters(double mean, double variance) {
-        this.p = 0.5; //FIXME: now it is fixed
+        this.p = 0.5; //TODO p ora è preso a caso
         double sqroot = Math.sqrt(2) * Math.sqrt(this.p * (this.p -1 ) * (mean * mean - variance));
         double denominator = this.p * mean * mean + this.p * variance - 2 * mean * mean;
         this.lambda0 = (2 * mean * (this.p -1) + sqroot) / denominator;

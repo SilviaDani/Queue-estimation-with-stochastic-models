@@ -54,7 +54,6 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
     }
 
     public void computeParameters(double mean, double variance) {
-        //TODO: Implement the computation of the parameters
         double cv = Math.sqrt(variance)/mean;
         this.nErl = 1;
         if (cv < CV_THRESHOLD){
