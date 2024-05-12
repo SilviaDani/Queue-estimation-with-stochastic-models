@@ -27,7 +27,7 @@ public class Main {
         //Troviamo il reale tempo di attesa e il tempo di ciascun evento per il plot
         ArrayList<Event> filteredEvents = new ArrayList(); //arraylist di soli eventi fine servizio e skip
         for (int currentEvent=0; currentEvent>events.size(); currentEvent++) {
-            Event curEvent = events.get(currentEvent);
+            Event curEvent = filteredEvents.get(currentEvent);
             if (curEvent instanceof EndService || curEvent instanceof LeaveQueue){
                 filteredEvents.add(curEvent);
             }
