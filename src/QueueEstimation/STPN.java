@@ -88,7 +88,7 @@ public class STPN<R,S> {
             Call.addFeature(new Priority(0));
             FirstService.addFeature(new EnablingFunction(servedName+"==0"));
             FirstService.addFeature(StochasticTransitionFeature.newUniformInstance(new BigDecimal("0"), new BigDecimal("1")));
-            //Service.addFeature(new EnablingFunction(servedName+"!=0"));
+            Service.addFeature(new EnablingFunction(servedName+"!=0"));
             Service.addFeature(StochasticTransitionFeature.newUniformInstance(new BigDecimal("2"), new BigDecimal("5")));
             SkipTransition.addFeature(new EnablingFunction(atServiceName+"==0"));
             SkipTransition.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));

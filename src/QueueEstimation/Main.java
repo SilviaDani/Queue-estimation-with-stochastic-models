@@ -25,23 +25,24 @@ public class Main {
 
         //Troviamo il reale tempo di attesa e il tempo di ciascun evento per il plot
         ArrayList<Event> filteredEvents = new ArrayList(); //arraylist di soli eventi fine servizio e skip
-        for (int currentEvent=0; currentEvent>events.size(); currentEvent++) {
+        for (int currentEvent=0; currentEvent<events.size(); currentEvent++) {
             Event curEvent = events.get(currentEvent);
             if (curEvent instanceof EndService || curEvent instanceof LeaveQueue){
                 filteredEvents.add(curEvent);
             }
         }
-        double realWaitingTime = filteredEvents.get(numClients+numServers).eventTime; //TODO da modificare in base alla risposta di Riccardo
+        double realWaitingTime = filteredEvents.get(numClients+numServers-1).eventTime; //TODO da modificare in base alla risposta di Riccardo
 
         //Stimiamo il tempo di attesa con la rete approssimata ad ogni evento di fine o skip
         ArrayList<Double> obsTimes = new ArrayList();
         ArrayList<Double> estimations = new ArrayList();
+        ModelApproximator modelApproximator = new ModelApproximator();
         for (int currentEvent=0; currentEvent<filteredEvents.size(); currentEvent++){
             Event curEvent = filteredEvents.get(currentEvent);
             obsTimes.add(curEvent.eventTime);
             if (curEvent instanceof EndService || curEvent instanceof LeaveQueue) {
                 DescriptiveStatistics stats = new DescriptiveStatistics();
-                for (int i=currentEvent; i<events.size(); i++) {
+                for (int i=currentEvent; i<events.size(); i++) { // XXX capire questo ciclo
                     Event event = events.get(i);
                     if (event instanceof EndService) {
                         if (Integer.valueOf(event.clientID) >= 0) {
@@ -63,19 +64,16 @@ public class Main {
                 Logger.debug("CV: " + cv);
                 //TODO DUBBIO MA QUELLI CHE SONO GIà DENTRO A UN SERVER LI METTO IN START?
                 if (cv > 1 + 1E-6) {
-                    ModelApproximator modelApproximator = new ModelApproximator();
                     modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1), numServers));
                     modelApproximator.approximateModel();
                     //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
                     //estimations.add()
                 } else if (Math.abs(cv - 1) <= 1E-6) {
-                    ModelApproximator modelApproximator = new ModelApproximator();
                     modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1)));
                     modelApproximator.approximateModel();
                     //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
                     //estimations.add()
                 } else {
-                    ModelApproximator modelApproximator = new ModelApproximator();
                     modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1), numServers));
                     modelApproximator.approximateModel();
                     //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
