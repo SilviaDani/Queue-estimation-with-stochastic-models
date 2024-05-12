@@ -21,6 +21,7 @@ public class Main {
         }catch (Exception e){
             System.out.println("Error creating the model");
         }
+        ModelApproximator modelApproximator = new ModelApproximator();
         ArrayList<Event> events = Parser.parse("log.txt", numServers);
 
         //Troviamo il reale tempo di attesa e il tempo di ciascun evento per il plot
@@ -31,7 +32,10 @@ public class Main {
                 filteredEvents.add(curEvent);
             }
         }
-        double realWaitingTime = filteredEvents.get(numClients+numServers).eventTime; //TODO da modificare in base alla risposta di Riccardo
+        double realWaitingTime = filteredEvents.get(numClients+numServers-1).eventTime;
+        //TODO da modificare in base alla risposta di Riccardo
+        //TODO io direi numClients
+
 
         //Stimiamo il tempo di attesa con la rete approssimata ad ogni evento di fine o skip
         ArrayList<Double> obsTimes = new ArrayList();
@@ -39,20 +43,18 @@ public class Main {
         for (int currentEvent=0; currentEvent<filteredEvents.size(); currentEvent++){
             Event curEvent = filteredEvents.get(currentEvent);
             obsTimes.add(curEvent.eventTime);
-            if (curEvent instanceof EndService || curEvent instanceof LeaveQueue) {
-                DescriptiveStatistics stats = new DescriptiveStatistics();
-                for (int i=currentEvent; i<events.size(); i++) {
-                    Event event = events.get(i);
-                    if (event instanceof EndService) {
-                        if (Integer.valueOf(event.clientID) >= 0) {
-                            stats.addValue(event.relativeEventTime);
-                            Logger.debug("EndService event: " + event.relativeEventTime);
-                        } else {
-                            //TODO gestire quelli che erano già a servizio
-                        }
-                    } else if (event instanceof LeaveQueue) {
-                        //TODO gestire gli skip
+            DescriptiveStatistics stats = new DescriptiveStatistics();
+            for (int i=0; i<=currentEvent; i++) {
+                Event event = filteredEvents.get(i);
+                if (event instanceof EndService) {
+                    if (Integer.valueOf(event.clientID) >= 0) {
+                        stats.addValue(event.relativeEventTime);
+                        Logger.debug("EndService event: " + event.relativeEventTime);
+                    } else {
+                        //TODO gestire quelli che erano già a servizio
                     }
+                } else if (event instanceof LeaveQueue) {
+                    //TODO gestire gli skip
                 }
                 double mean = stats.getMean() / numServers;
                 double variance = stats.getVariance() / (numServers * numServers);
@@ -61,26 +63,17 @@ public class Main {
                 Logger.debug("Variance: " + variance);
                 Logger.debug("Standard deviation: " + Math.sqrt(variance));
                 Logger.debug("CV: " + cv);
-                //TODO DUBBIO MA QUELLI CHE SONO GIà DENTRO A UN SERVER LI METTO IN START?
+                //TODO DUBBIO MA QUELLI CHE SONO GIà DENTRO A UN SERVER LI METTO IN START o in intermediate o altro?
                 if (cv > 1 + 1E-6) {
-                    ModelApproximator modelApproximator = new ModelApproximator();
                     modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1), numServers));
-                    modelApproximator.approximateModel();
-                    //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
-                    //estimations.add()
                 } else if (Math.abs(cv - 1) <= 1E-6) {
-                    ModelApproximator modelApproximator = new ModelApproximator();
                     modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1)));
-                    modelApproximator.approximateModel();
-                    //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
-                    //estimations.add()
                 } else {
-                    ModelApproximator modelApproximator = new ModelApproximator();
                     modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1), numServers));
-                    modelApproximator.approximateModel();
-                    //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
-                    //estimations.add()
                 }
+                modelApproximator.approximateModel();
+                //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
+                //estimations.add()
             }
         }
     }
