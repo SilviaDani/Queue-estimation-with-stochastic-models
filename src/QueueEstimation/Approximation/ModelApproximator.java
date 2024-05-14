@@ -10,4 +10,8 @@ public class ModelApproximator {
     public void approximateModel() {
         modelApproximation.approximateModel();
     }
+
+    public String getModelType(){
+        return modelApproximation.getModelType();
+    }
 }

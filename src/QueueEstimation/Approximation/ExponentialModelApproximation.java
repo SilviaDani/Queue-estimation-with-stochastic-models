@@ -35,6 +35,10 @@ public class ExponentialModelApproximation implements ModelApproximation{
 
     }
     @Override
+    public String getModelType() {
+        return "EXP";
+    }
+    @Override
     public void approximateModel() {
         Logger.debug("Approximating exponential model");
     }

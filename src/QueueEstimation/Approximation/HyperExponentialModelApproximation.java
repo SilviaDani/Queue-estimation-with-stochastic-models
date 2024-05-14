@@ -31,6 +31,10 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
 
     }
     @Override
+    public String getModelType() {
+        return "HYPEREXP";
+    }
+    @Override
     public void approximateModel() {
         Logger.debug("Approximating hyper-exponential model");
     }

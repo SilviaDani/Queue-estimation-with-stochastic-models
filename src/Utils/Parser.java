@@ -21,7 +21,7 @@ public class Parser {
             "Service"
     };
 
-    private static boolean isTransitionLine(String line){
+    protected static boolean isTransitionLine(String line){
         for(String prefix : transitionPrefices){
             if(line.startsWith(prefix)){
                 return true;

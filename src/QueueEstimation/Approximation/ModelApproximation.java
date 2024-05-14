@@ -8,5 +8,6 @@ import java.util.HashMap;
 public interface ModelApproximation {
     void approximateModel();
 
+    String getModelType();
 
 }
