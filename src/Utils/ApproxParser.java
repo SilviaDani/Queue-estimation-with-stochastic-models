@@ -2,6 +2,7 @@ package Utils;
 
 import QueueEstimation.Approximation.ModelApproximation;
 import QueueEstimation.Approximation.ModelApproximator;
+import QueueEstimation.EndService;
 import QueueEstimation.Event;
 
 import java.io.BufferedReader;
@@ -31,9 +32,10 @@ public class ApproxParser{
         return false;
     }
 
-    public static double getApproximatedETA (String filename, ModelApproximator approximator){
+    public static ArrayList<Event> getApproximatedETA (String filename, ModelApproximator approximator){
         double currentTime = 0.0;
-        try{
+        ArrayList<Event> events = new ArrayList<>();
+        try{ //TODO: mettere array list di eventi "uscita" dal servizio
             BufferedReader reader = new BufferedReader(new FileReader(filename));
             String line = reader.readLine();
             boolean isParentSection = false;
@@ -47,7 +49,11 @@ public class ApproxParser{
                     isParentSection = false;
                     line = reader.readLine();
                     currentTime += Double.parseDouble(currentETAs.get(line.trim()));
+                    if(line.trim().startsWith("Service0") || line.trim().startsWith("Service1") || line.trim().startsWith("Service =") || line.trim().startsWith("ServiceEXP")){
+                        events.add(new EndService(currentTime, -1, "null",  "null"));
+                    }
                     currentETAs.clear();
+                    //TODO mettere solo "Transizione" 2
                 }
                 line = reader.readLine();
             }
@@ -55,6 +61,6 @@ public class ApproxParser{
         }catch (Exception e){
             e.printStackTrace();
         }
-        return currentTime;
+        return events;
     }
 }

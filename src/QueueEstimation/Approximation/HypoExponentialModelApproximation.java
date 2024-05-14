@@ -58,7 +58,7 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
             WorkingPrintStreamLogger l = new WorkingPrintStreamLogger(new PrintStream(fos), true);
             Sequencer s = new Sequencer(net, marking, new STPNSimulatorComponentsFactory(), l);
 
-            BigDecimal timeLimit = new BigDecimal(100);
+            BigDecimal timeLimit = new BigDecimal(1000);
             BigDecimal timeStep = new BigDecimal("0.1");
             int timePoints = (timeLimit.divide(timeStep)).intValue() + 1;
 

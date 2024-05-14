@@ -15,10 +15,12 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import javax.swing.*;
 
+import static java.lang.System.exit;
+
 public class Main {
     public static void main(String[] args) {
         int numServers = 4;
-        int numClients = 10;
+        int numClients = 50;
         STPN stpn = new STPN(numServers, numClients);
         ApproxParser approxParser = new ApproxParser();
         try {
@@ -97,9 +99,15 @@ public class Main {
                 }
                 modelApproximator.approximateModel();
                 // Parse the output
-                double approxWaitingTime = ApproxParser.getApproximatedETA("log_approx.txt", modelApproximator);
-                Logger.debug("Approximation: " + approxWaitingTime);
-                estimations.add(approxWaitingTime);
+                ArrayList<Event> approxEvents = ApproxParser.getApproximatedETA("log_approx.txt", modelApproximator);
+                // Let's consider only the last-nServer event
+                // TODO: modificare in base alla risposta di Riccardo -> double eta = approxEvents.get(approxEvents.size() - numServers).eventTime;
+                double eta = approxEvents.get(approxEvents.size() - 1).eventTime;
+                for (int i = 0; i < approxEvents.size(); i++) {
+                    Logger.debug(approxEvents.get(i).toString());
+                }
+                Logger.debug("Estimated time: " + eta);
+                estimations.add(eta);
             } else {
                 estimations.add(0.0);
             }
@@ -107,7 +115,7 @@ public class Main {
                 //estimations.add()
         }
         ChartPlotter chartPlotter = new ChartPlotter("Ground Truth vs Approximation", obsTimes, estimations);
-        chartPlotter.setSize(800, 400);
+        chartPlotter.setSize(800, 800);
         chartPlotter.setLocationRelativeTo(null);
         chartPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         chartPlotter.setVisible(true);

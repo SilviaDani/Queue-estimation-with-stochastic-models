@@ -30,9 +30,8 @@ public class ChartPlotter extends JFrame {
         XYSeriesCollection dataset = new XYSeriesCollection();
 
         XYSeries series1 = new XYSeries("Ground Truth");
-        for (int i = 0; i < groundTruth.size(); i++){
-            series1.add(groundTruth.get(i), groundTruth.get(i));
-        }
+        series1.add(0.0, groundTruth.getLast().doubleValue());
+        series1.add(groundTruth.getLast().doubleValue(), 0.0);
         dataset.addSeries(series1);
 
         XYSeries series2 = new XYSeries("Approximated");
