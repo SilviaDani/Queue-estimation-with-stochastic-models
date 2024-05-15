@@ -83,21 +83,21 @@ public class Main {
                 Logger.debug("Standard deviation: " + Math.sqrt(variance));
                 Logger.debug("CV: " + cv);
                 // Compute approximation
-            if (numClients + numServers - currentEvent - 1 > 0) {
+            if (numClients - currentEvent - 1 > 0) {
                 //TODO DUBBIO MA QUELLI CHE SONO GIà DENTRO A UN SERVER LI METTO IN START o in intermediate o altro?
                 if (cv > 1 + 1E-6) {
-                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1), numServers));
+                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, (numClients  - currentEvent - 1), numServers));
                 } else if (Math.abs(cv - 1) <= 1E-6) {
-                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1)));
+                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, (numClients  - currentEvent - 1)));
                 } else {
-                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, (numClients + numServers - currentEvent - 1), numServers));
+                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, (numClients - currentEvent - 1), numServers));
                 }
                 modelApproximator.approximateModel();
                 // Parse the output
                 ArrayList<Event> approxEvents = ApproxParser.getApproximatedETA("log_approx.txt", modelApproximator);
                 // Let's consider only the last-nServer event
                 // TODO: modificare in base alla risposta di Riccardo -> double eta = approxEvents.get(approxEvents.size() - numServers).eventTime;
-                double eta = approxEvents.get(approxEvents.size() - 1).eventTime;
+                double eta = approxEvents.getLast().eventTime;
                 for (int i = 0; i < approxEvents.size(); i++) {
                     Logger.debug(approxEvents.get(i).toString());
                 }
