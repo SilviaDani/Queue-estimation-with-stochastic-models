@@ -19,7 +19,7 @@ import static java.lang.System.exit;
 
 public class Main {
     public static void main(String[] args) {
-        int numServers = 4;
+        int numServers = 3;
         int numClients = 50;
         STPN stpn = new STPN(numServers, numClients);
         ApproxParser approxParser = new ApproxParser();
@@ -39,7 +39,8 @@ public class Main {
                 filteredEvents.add(curEvent);
             }
         }
-        double realWaitingTime = filteredEvents.get(numClients+numServers-1).eventTime; //TODO da modificare in base alla risposta di Riccardo
+
+        double realWaitingTime = filteredEvents.getLast().eventTime;
         // TODO da modificare in base alla risposta di Riccardo
         // TODO io direi numClients
 
@@ -47,14 +48,8 @@ public class Main {
         // Stimiamo il tempo di attesa con la rete approssimata ad ogni evento di fine o skip
         ArrayList<Double> obsTimes = new ArrayList(); // X axis of the plot
         ArrayList<Double> estimations = new ArrayList();
-        // XXX Skip all the events with clientID < 0
-        int startingIndex = 0;
-        while(Integer.parseInt(filteredEvents.get(startingIndex).clientID) < 0 || filteredEvents.get(startingIndex) instanceof LeaveQueue){
-            startingIndex++;
-        }
-        Logger.debug("Starting index: " + startingIndex);
 
-        for (int currentEvent=startingIndex+1; currentEvent<filteredEvents.size(); currentEvent++){
+        for (int currentEvent = 1; currentEvent < filteredEvents.size(); currentEvent++){
             Logger.debug("-------------------------------------------------");
             Logger.debug("Current event: " + currentEvent);
             Logger.debug(filteredEvents.get(currentEvent).toString());
@@ -65,7 +60,7 @@ public class Main {
             Logger.debug("Time left: " + (realWaitingTime - curEvent.eventTime));
             DescriptiveStatistics stats = new DescriptiveStatistics();
             // Compute mean and variance of the service time based on the events up to the current one
-            for (int i=0; i<=currentEvent; i++) {
+            for (int i = 0; i <= currentEvent; i++) {
                 Event event = filteredEvents.get(i);
                 if (event instanceof EndService) {
                     if (Integer.parseInt(event.clientID) >= 0) {

@@ -53,13 +53,13 @@ public class STPN<R,S> {
             String atServiceName = "AtService" + (s + 1);
             String skipName = "Skip" + (s + 1);
             String servedName = "Served" + (s + 1);
+
             //Generating Nodes
             Place AtService = net.addPlace(atServiceName);
             Place Served = net.addPlace(servedName);
             Place Skip = net.addPlace(skipName);
             Place Skipped = net.addPlace("Skipped" + (s + 1));
             Transition Call = net.addTransition("Call" + (s + 1));
-            Transition FirstService = net.addTransition("FirstService" + (s + 1));
             Transition Service = net.addTransition("Service" + (s + 1));
             Transition SkipTransition = net.addTransition("SkipTransition" + (s + 1));
             Transition ToBeServed = net.addTransition("ToBeServed" + (s + 1));
@@ -74,21 +74,16 @@ public class STPN<R,S> {
             net.addPrecondition(Skip, ToBeServed);
             net.addPostcondition(SkipTransition, Skipped);
             net.addPostcondition(Service, Served);
-            net.addPrecondition(AtService, FirstService);
-            net.addPostcondition(FirstService, Served);
-            net.addInhibitorArc(Served, FirstService);
 
             //Generating Properties
-            marking.setTokens(AtService, 1);
+            marking.setTokens(AtService, 0);
             marking.setTokens(Served, 0);
             marking.setTokens(Skip, 0);
             marking.setTokens(Skipped, 0);
             Call.addFeature(new EnablingFunction(atServiceName+"==0 && "+skipName+"==0"));
             Call.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));
             Call.addFeature(new Priority(0));
-            FirstService.addFeature(new EnablingFunction(servedName+"==0"));
-            FirstService.addFeature(StochasticTransitionFeature.newUniformInstance(new BigDecimal("0"), new BigDecimal("1")));
-            Service.addFeature(new EnablingFunction(servedName+"!=0"));
+            // Service.addFeature(new EnablingFunction(servedName+"!=0"));
             Service.addFeature(StochasticTransitionFeature.newUniformInstance(new BigDecimal("2"), new BigDecimal("10")));
             SkipTransition.addFeature(new EnablingFunction(atServiceName+"==0"));
             SkipTransition.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));
