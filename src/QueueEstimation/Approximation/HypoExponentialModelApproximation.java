@@ -71,7 +71,6 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         }catch (Exception e){
             e.printStackTrace();
         }
-        Logger.debug("Approximating hypo-exponential model");
     }
 
     private PetriNet createNet(){

@@ -19,8 +19,8 @@ import static java.lang.System.exit;
 
 public class Main {
     public static void main(String[] args) {
-        int numServers = 3;
-        int numClients = 50;
+        int numServers = 1;
+        int numClients = 25;
         STPN stpn = new STPN(numServers, numClients);
         ApproxParser approxParser = new ApproxParser();
         try {
@@ -92,17 +92,16 @@ public class Main {
                 } else {
                     modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, (numClients - currentEvent - 1), numServers));
                 }
-                modelApproximator.approximateModel();
-                // Parse the output
-                ArrayList<Event> approxEvents = ApproxParser.getApproximatedETA("log_approx.txt", modelApproximator);
-                // Let's consider only the last-nServer event
-                // TODO: modificare in base alla risposta di Riccardo -> double eta = approxEvents.get(approxEvents.size() - numServers).eventTime;
-                double eta = approxEvents.getLast().eventTime;
-                for (int i = 0; i < approxEvents.size(); i++) {
-                    Logger.debug(approxEvents.get(i).toString());
+                DescriptiveStatistics approx_stat = new DescriptiveStatistics();
+                for (int nRep = 0; nRep < 1000; nRep++) {
+                    modelApproximator.approximateModel();
+                    ArrayList<Event> approxEvents = ApproxParser.getApproximatedETA("log_approx.txt", modelApproximator);
+                    double eta = approxEvents.getLast().eventTime;
+                    // TODO: modificare in base alla risposta di Riccardo -> double eta = approxEvents.get(approxEvents.size() - numServers).eventTime;
+                    approx_stat.addValue(eta);
                 }
-                Logger.debug("Estimated time: " + eta);
-                estimations.add(eta);
+                Logger.debug("Estimated time: " + approx_stat.getMean());
+                estimations.add(approx_stat.getMean());
             } else {
                 estimations.add(0.0);
             }
