@@ -8,17 +8,19 @@ import java.math.BigDecimal;
 
 public class ExpServer extends Server{
 
+    double lambda = 0.0;
 
-    public ExpServer(int distributionParameter) {
-        super(distributionParameter);
+    public ExpServer(double distributionParameter) {
+        super();
+        this.lambda = distributionParameter;
     }
 
     public StochasticTransitionFeature getStochasticTransitionFeature(PetriNet net){
-        return StochasticTransitionFeature.newExponentialInstance(BigDecimal.valueOf(distributionParameter), MarkingExpr.from("1", net));
+        return StochasticTransitionFeature.newExponentialInstance(BigDecimal.valueOf(lambda), MarkingExpr.from("1", net));
     }
 
     public StochasticTransitionFeature getStochasticTransitionFeature(PetriNet net, double clockRate){
-        return StochasticTransitionFeature.newExponentialInstance(BigDecimal.valueOf(distributionParameter), MarkingExpr.from(String.valueOf(clockRate), net));
+        return StochasticTransitionFeature.newExponentialInstance(BigDecimal.valueOf(lambda), MarkingExpr.from(String.valueOf(clockRate), net));
     }
 
 }

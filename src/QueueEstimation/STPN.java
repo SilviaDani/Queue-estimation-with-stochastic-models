@@ -28,7 +28,7 @@ public class STPN<R,S> {
         this.clients = clients;
     }
 
-    public TransientSolution<R, S> makeModel() throws IOException { //TODO change the distribution of the servers
+    public TransientSolution<R, S> makeModel() throws IOException {
         PetriNet net = new PetriNet();
         Marking marking = new Marking();
         //Generating Queue Node
@@ -70,7 +70,6 @@ public class STPN<R,S> {
             Call.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));
             Call.addFeature(new Priority(0));
             // Service.addFeature(new EnablingFunction(servedName+"!=0"));
-            // TODO: StochasticTransitionFeature pipip = StochasticTransitionFeature.newUniformInstance(new BigDecimal("2"), new BigDecimal("10"));
             Service.addFeature(servers.get(s).getStochasticTransitionFeature(net));
             SkipTransition.addFeature(new EnablingFunction(atServiceName+"==0"));
             SkipTransition.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(skipProb), net)));
@@ -91,7 +90,6 @@ public class STPN<R,S> {
         BigDecimal timeLimit = new BigDecimal(5);
         BigDecimal timeStep = new BigDecimal("0.1");
         int timePoints = (timeLimit.divide(timeStep)).intValue() + 1;
-        //TODO from here
         TransientMarkingConditionProbability r1 =
                 new TransientMarkingConditionProbability(s,
                         new ContinuousRewardTime(timeStep), timePoints,
@@ -100,7 +98,6 @@ public class STPN<R,S> {
 
         TransitionAbsoluteFiringTime r2 = new TransitionAbsoluteFiringTime(s, new ContinuousRewardTime(timeStep), timePoints, "Service1");
         RewardEvaluator re2 = new RewardEvaluator(r2, 1);
-        //TODO to here is it necessary?
         s.simulate();
 
         return null;

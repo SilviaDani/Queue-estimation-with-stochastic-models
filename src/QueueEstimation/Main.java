@@ -21,7 +21,8 @@ public class Main {
         // Create the servers
         ArrayList<Server> servers = new ArrayList<>();
         for (int i = 0; i < numServers; i++) {
-            servers.add(new ExpServer(2));
+            // servers.add(new ExpServer(2));
+            servers.add(new UniServer(1, 10));
         }
 
         // Create the STPN model
@@ -63,41 +64,37 @@ public class Main {
             obsTimes.add(curEvent.eventTime);
             Logger.debug("Observed time: " + curEvent.eventTime);
             Logger.debug("Time left: " + (realWaitingTime - curEvent.eventTime));
-            DescriptiveStatistics stats = new DescriptiveStatistics();
+            DescriptiveStatistics endServiceStats = new DescriptiveStatistics();
             // Compute mean and variance of the service time based on the events up to the current one
             for (int i = 0; i <= currentEvent; i++) {
                 Event event = filteredEvents.get(i);
                 if (event instanceof EndService) {
-                    if (Integer.parseInt(event.clientID) >= 0) {
-                        stats.addValue(event.relativeEventTime);
-                        Logger.debug("EndService event: " + event.relativeEventTime);
-                    } else {
-                        // TODO gestire quelli che erano già a servizio
-                        Logger.debug("eeeeee");
-                    }
+                    endServiceStats.addValue(event.relativeEventTime);
+                    Logger.debug("EndService event: " + event.relativeEventTime);
                 } else if (event instanceof LeaveQueue) {
                     // TODO gestire gli skip
-                    Logger.debug("hei");
                 }
             }
-                double mean = stats.getMean() / numServers;
-                double variance = stats.getVariance() / (numServers * numServers);
-                double cv = Math.sqrt(variance) / mean;
-                Logger.debug("Mean: " + mean);
-                Logger.debug("Variance: " + variance);
-                Logger.debug("Standard deviation: " + Math.sqrt(variance));
+                // Compute mean and variance of the service time
+                double meanES = endServiceStats.getMean() / numServers;
+                double varianceES = endServiceStats.getVariance() / (numServers * numServers);
+                double cv = Math.sqrt(varianceES) / meanES;
+                Logger.debug("Mean: " + meanES);
+                Logger.debug("Variance: " + varianceES);
+                Logger.debug("Standard deviation: " + Math.sqrt(varianceES));
                 Logger.debug("CV: " + cv);
+
                 // Compute approximation
             if (numClients - currentEvent - 1 > 0) {
                 //TODO DUBBIO MA QUELLI CHE SONO GIà DENTRO A UN SERVER LI METTO IN START o in intermediate o altro?
                 if (cv > 1 + 1E-6) {
-                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, (numClients  - currentEvent - 1), numServers));
+                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(meanES, varianceES, (numClients  - currentEvent - 1), numServers));
                 } else if (Math.abs(cv - 1) <= 1E-6) {
-                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, (numClients  - currentEvent - 1)));
+                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(meanES, varianceES, (numClients  - currentEvent - 1)));
                 } else if (cv < 1 && cv * cv > 0.5){
-                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, (numClients - currentEvent - 1), numServers));
+                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(meanES, varianceES, (numClients - currentEvent - 1), numServers));
                 } else {
-                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, (numClients - currentEvent - 1), numServers));
+                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(meanES, varianceES, (numClients - currentEvent - 1), numServers));
                 }
                 DescriptiveStatistics approx_stat = new DescriptiveStatistics();
                 for (int nRep = 0; nRep < REPETITIONS; nRep++) {

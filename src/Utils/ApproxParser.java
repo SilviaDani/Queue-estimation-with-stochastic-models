@@ -36,7 +36,7 @@ public class ApproxParser{
     public static ArrayList<Event> getApproximatedETA (String filename, ModelApproximator approximator){
         double currentTime = 0.0;
         ArrayList<Event> events = new ArrayList<>();
-        try{ //TODO: mettere array list di eventi "uscita" dal servizio
+        try{
             BufferedReader reader = new BufferedReader(new FileReader(filename));
             String line = reader.readLine();
             boolean isParentSection = false;
@@ -54,7 +54,6 @@ public class ApproxParser{
                         events.add(new EndService(currentTime, -1, "null",  "null"));
                     }
                     currentETAs.clear();
-                    //TODO mettere solo "Transizione" 2
                 }
                 line = reader.readLine();
             }
