@@ -90,6 +90,7 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
     }
 
     public void computeParameters(double mean, double variance) {
+        /*
         double cv = Math.sqrt(variance)/mean;
         this.nErl = 1;
         if (cv < CV_THRESHOLD){
@@ -101,6 +102,13 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         double denominator = mean * mean - this.nErl * variance;
         this.lambdaErl = (mean + sqroot) / denominator;
         this.lambdaExp = (mean - sqroot) / denominator;
+        Logger.debug("nErl: " + this.nErl);
+        Logger.debug("lambdaErl: " + this.lambdaErl);
+        Logger.debug("lambdaExp: " + this.lambdaExp);*/
+        double cv = Math.sqrt(variance)/mean;
+        this.nErl = 1;
+        this.lambdaErl = (2/mean) / (1 + Math.sqrt(1 + 2 * (cv * cv - 1)));
+        this.lambdaExp = (2/mean) / (1 - Math.sqrt(1 + 2 * (cv * cv - 1)));
         Logger.debug("nErl: " + this.nErl);
         Logger.debug("lambdaErl: " + this.lambdaErl);
         Logger.debug("lambdaExp: " + this.lambdaExp);

@@ -1,9 +1,6 @@
 package QueueEstimation;
 
-import QueueEstimation.Approximation.ExponentialModelApproximation;
-import QueueEstimation.Approximation.HyperExponentialModelApproximation;
-import QueueEstimation.Approximation.HypoExponentialModelApproximation;
-import QueueEstimation.Approximation.ModelApproximator;
+import QueueEstimation.Approximation.*;
 import Utils.ApproxParser;
 import Utils.ChartPlotter;
 import Utils.Logger;
@@ -15,13 +12,20 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import javax.swing.*;
 
-import static java.lang.System.exit;
-
 public class Main {
+    final static int REPETITIONS = 100;
     public static void main(String[] args) {
-        int numServers = 1;
-        int numClients = 25;
-        STPN stpn = new STPN(numServers, numClients);
+        int numServers = 3;
+        int numClients = 20;
+
+        // Create the servers
+        ArrayList<Server> servers = new ArrayList<>();
+        for (int i = 0; i < numServers; i++) {
+            servers.add(new ExpServer(2));
+        }
+
+        // Create the STPN model
+        STPN stpn = new STPN(servers, numClients);
         ApproxParser approxParser = new ApproxParser();
         try {
             stpn.makeModel();
@@ -48,6 +52,7 @@ public class Main {
         // Stimiamo il tempo di attesa con la rete approssimata ad ogni evento di fine o skip
         ArrayList<Double> obsTimes = new ArrayList(); // X axis of the plot
         ArrayList<Double> estimations = new ArrayList();
+        ArrayList<Double> stds = new ArrayList();
 
         for (int currentEvent = 1; currentEvent < filteredEvents.size(); currentEvent++){
             Logger.debug("-------------------------------------------------");
@@ -89,11 +94,13 @@ public class Main {
                     modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, (numClients  - currentEvent - 1), numServers));
                 } else if (Math.abs(cv - 1) <= 1E-6) {
                     modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, (numClients  - currentEvent - 1)));
-                } else {
+                } else if (cv < 1 && cv * cv > 0.5){
                     modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, (numClients - currentEvent - 1), numServers));
+                } else {
+                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, (numClients - currentEvent - 1), numServers));
                 }
                 DescriptiveStatistics approx_stat = new DescriptiveStatistics();
-                for (int nRep = 0; nRep < 1000; nRep++) {
+                for (int nRep = 0; nRep < REPETITIONS; nRep++) {
                     modelApproximator.approximateModel();
                     ArrayList<Event> approxEvents = ApproxParser.getApproximatedETA("log_approx.txt", modelApproximator);
                     double eta = approxEvents.getLast().eventTime;
@@ -102,13 +109,15 @@ public class Main {
                 }
                 Logger.debug("Estimated time: " + approx_stat.getMean());
                 estimations.add(approx_stat.getMean());
+                stds.add(approx_stat.getStandardDeviation());
             } else {
                 estimations.add(0.0);
+                stds.add(0.0);
             }
                 //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
                 //estimations.add()
         }
-        ChartPlotter chartPlotter = new ChartPlotter("Ground Truth vs Approximation", obsTimes, estimations);
+        ChartPlotter chartPlotter = new ChartPlotter("Ground Truth vs Approximation", obsTimes, estimations, stds);
         chartPlotter.setSize(800, 800);
         chartPlotter.setLocationRelativeTo(null);
         chartPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

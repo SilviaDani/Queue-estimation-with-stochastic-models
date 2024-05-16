@@ -1,44 +1,30 @@
 package QueueEstimation;
 
-import Utils.Logger;
 import Utils.WorkingPrintStreamLogger;
-import org.oristool.analyzer.log.AnalysisLogger;
-import org.oristool.analyzer.log.NoOpLogger;
-import org.oristool.analyzer.log.PrintStreamLogger;
-import org.oristool.math.OmegaBigDecimal;
-import org.oristool.math.domain.DBMZone;
-import org.oristool.math.expression.Expolynomial;
-import org.oristool.math.expression.Variable;
-import org.oristool.math.function.GEN;
-import org.oristool.math.function.PartitionedGEN;
 import org.oristool.models.pn.Priority;
 import org.oristool.models.stpn.MarkingExpr;
 import org.oristool.models.stpn.TransientSolution;
-import org.oristool.models.stpn.TransientSolutionViewer;
-import org.oristool.models.stpn.trans.RegTransient;
-import org.oristool.models.stpn.trees.DeterministicEnablingState;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
 import org.oristool.petrinet.*;
 import org.oristool.simulator.*;
-import org.oristool.models.stpn.trans.*;
 import org.oristool.simulator.rewards.*;
 import org.oristool.simulator.stpn.STPNSimulatorComponentsFactory;
 import org.oristool.simulator.stpn.TransientMarkingConditionProbability;
-import org.oristool.simulator.stpn.TransientMarkingProbability;
 import org.oristool.simulator.stpn.TransitionAbsoluteFiringTime;
 
 import java.io.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 public class STPN<R,S> {
-    protected int servers;
+    protected int nServers;
+    protected ArrayList<Server> servers;
     protected int clients;
+    protected  double skipProb = 0.1;
 
-    public STPN(int servers, int clients) {
+    public STPN(ArrayList<Server> servers, int clients) {
         this.servers = servers;
+        this.nServers = servers.size();
         this.clients = clients;
     }
 
@@ -48,7 +34,7 @@ public class STPN<R,S> {
         //Generating Queue Node
         Place Queue = net.addPlace("Queue");
         marking.setTokens(Queue, clients);
-        for (int s = 0; s < servers; s++) {
+        for (int s = 0; s < nServers; s++) {
             //Generating the name of the places (only the ones we need after)
             String atServiceName = "AtService" + (s + 1);
             String skipName = "Skip" + (s + 1);
@@ -84,12 +70,13 @@ public class STPN<R,S> {
             Call.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));
             Call.addFeature(new Priority(0));
             // Service.addFeature(new EnablingFunction(servedName+"!=0"));
-            Service.addFeature(StochasticTransitionFeature.newUniformInstance(new BigDecimal("2"), new BigDecimal("10")));
+            // TODO: StochasticTransitionFeature pipip = StochasticTransitionFeature.newUniformInstance(new BigDecimal("2"), new BigDecimal("10"));
+            Service.addFeature(servers.get(s).getStochasticTransitionFeature(net));
             SkipTransition.addFeature(new EnablingFunction(atServiceName+"==0"));
-            SkipTransition.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));
+            SkipTransition.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(skipProb), net)));
             SkipTransition.addFeature(new Priority(0));
             ToBeServed.addFeature(new EnablingFunction(atServiceName+"==0"));
-            ToBeServed.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("9", net)));
+            ToBeServed.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(1-skipProb), net)));
             ToBeServed.addFeature(new Priority(0));
         }
 

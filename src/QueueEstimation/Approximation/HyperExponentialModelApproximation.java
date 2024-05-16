@@ -1,11 +1,21 @@
 package QueueEstimation.Approximation;
 
 import Utils.Logger;
+import Utils.WorkingPrintStreamLogger;
+import org.apache.commons.math3.analysis.function.Log;
 import org.oristool.models.pn.Priority;
 import org.oristool.models.stpn.MarkingExpr;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
 import org.oristool.petrinet.*;
+import org.oristool.simulator.Sequencer;
+import org.oristool.simulator.rewards.ContinuousRewardTime;
+import org.oristool.simulator.rewards.RewardEvaluator;
+import org.oristool.simulator.stpn.STPNSimulatorComponentsFactory;
+import org.oristool.simulator.stpn.TransientMarkingConditionProbability;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.math.BigDecimal;
 
 public class HyperExponentialModelApproximation implements ModelApproximation{
@@ -36,7 +46,28 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
     }
     @Override
     public void approximateModel() {
-        Logger.debug("Approximating hyper-exponential model");
+        File f = new File("log_approx.txt");
+        try {
+            if (!f.exists()) {
+                f.createNewFile();
+            }
+            FileOutputStream fos = new FileOutputStream(f);
+            WorkingPrintStreamLogger l = new WorkingPrintStreamLogger(new PrintStream(fos), true);
+            Sequencer s = new Sequencer(net, marking, new STPNSimulatorComponentsFactory(), l);
+
+            BigDecimal timeLimit = new BigDecimal(1000);
+            BigDecimal timeStep = new BigDecimal("0.1");
+            int timePoints = (timeLimit.divide(timeStep)).intValue() + 1;
+
+            TransientMarkingConditionProbability r1 =
+                    new TransientMarkingConditionProbability(s,
+                            new ContinuousRewardTime(timeStep), timePoints,
+                            MarkingCondition.fromString("Done"));
+            RewardEvaluator re1 = new RewardEvaluator(r1, 1);
+            s.simulate();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     private PetriNet createNet(){
@@ -67,10 +98,12 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
 
     public void computeParameters(double mean, double variance) {
         this.p = 0.5; //TODO p ora è preso a caso
-        double sqroot = Math.sqrt(2) * Math.sqrt(this.p * (this.p -1 ) * (mean * mean - variance));
-        double denominator = this.p * mean * mean + this.p * variance - 2 * mean * mean;
-        this.lambda0 = (2 * mean * (this.p -1) + sqroot) / denominator;
-        this.lambda1 = (2 * mean * (this.p - 1) - sqroot) / denominator;
+        double cvsqaured = variance/(mean * mean);
+        this.lambda0 = (1 / mean) / (1 - Math.sqrt((1 - this.p) / this.p) * (cvsqaured - 1)/2);
+        this.lambda1 = (1 / mean) / (1 + Math.sqrt(this.p / (1 - this.p)) * (cvsqaured - 1)/2);
+        Logger.debug("p: " + this.p);
+        Logger.debug("lambda0: " + this.lambda0);
+        Logger.debug("lambda1: " + this.lambda1);
     }
 
     private void updateModel(int nServers){
