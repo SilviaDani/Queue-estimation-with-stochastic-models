@@ -24,6 +24,8 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
     
     private double detOffset = 0.0;
     private double lambda = 1.0;
+
+    private double skip;
     public LowCVHypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers) {
         if (net == null){
             net = new PetriNet();
@@ -37,13 +39,24 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         setInitialMarking(initialTokens);
     }
 
+    public LowCVHypoExponentialModelApproximation (double mean, double variance, int initialTokens, int nServers, double skip){
+        this(mean, variance, initialTokens, nServers);
+        this.skip = skip;
+    }
+
     private void setInitialMarking(int initialTokens) {
         marking.setTokens(net.getPlace("Done"), 0);
         marking.setTokens(net.getPlace("Intermediate"), 0);
-        marking.setTokens(net.getPlace("Start"), initialTokens);
+        marking.setTokens(net.getPlace("Start"), 0);
+        marking.setTokens(net.getPlace("Queue"), initialTokens);
     }
 
     private void updateModel(int nServers) {
+        net.getTransition("Call").removeFeature(StochasticTransitionFeature.class);
+        net.getTransition("Call").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(1.0-this.skip), net)));
+        net.getTransition("Skip").removeFeature(StochasticTransitionFeature.class);
+        net.getTransition("Skip").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(this.skip), net)));
+
         net.getTransition("ServiceDET").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("ServiceDET").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal(this.detOffset), MarkingExpr.from("1", net)));
         net.getTransition("ServiceDET").removeFeature(Priority.class);
@@ -62,10 +75,18 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         Place Done = net.addPlace("Done");
         Place Intermediate = net.addPlace("Intermediate");
         Place Start = net.addPlace("Start");
+        Place Queue = net.addPlace("Queue");
+        Transition Call = net.addTransition("Call");
+        Transition Skip = net.addTransition("Skip");
         Transition ServiceDET = net.addTransition("ServiceDET");
         Transition ServiceEXP = net.addTransition("ServiceEXP");
 
         //Generating Connectors
+        net.addPrecondition(Queue, Call);
+        net.addPostcondition(Call, Start);
+        net.addPrecondition(Queue, Skip);
+        net.addPostcondition(Skip, Done);
+
         net.addPrecondition(Start, ServiceDET);
         net.addPostcondition(ServiceEXP, Done);
         net.addPostcondition(ServiceDET, Intermediate);

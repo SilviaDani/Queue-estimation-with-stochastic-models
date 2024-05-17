@@ -17,10 +17,10 @@ public class ApproxParser{
     public ApproxParser(){
         if (transitionPrefices == null){
             transitionPrefices = new HashMap<>();
-            transitionPrefices.put("EXP", new String[]{"Service"});
-            transitionPrefices.put("HYPOEXP", new String[]{"ServiceERL", "ServiceEXP"});
-            transitionPrefices.put("HYPEREXP", new String[]{"SwitchP", "Switch1_P", "Service0", "Service1"});
-            transitionPrefices.put("LOWCVHYPOEXP", new String[]{"ServiceDET", "ServiceEXP"});
+            transitionPrefices.put("EXP", new String[]{"Call", "Skip", "Service"});
+            transitionPrefices.put("HYPOEXP", new String[]{"Call", "Skip","ServiceERL", "ServiceEXP"});
+            transitionPrefices.put("HYPEREXP", new String[]{"Call", "Skip","SwitchP", "Switch1_P", "Service0", "Service1"});
+            transitionPrefices.put("LOWCVHYPOEXP", new String[]{"Call", "Skip","ServiceDET", "ServiceEXP"});
         }
     }
 

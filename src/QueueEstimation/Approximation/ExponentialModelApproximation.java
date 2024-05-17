@@ -26,6 +26,8 @@ public class ExponentialModelApproximation implements ModelApproximation{
 
     double epsilon = 1E-6;
 
+    private double skip = 0.1;
+
     public ExponentialModelApproximation(double mean, double variance, int initialTokens){
         if (net == null) {
             net = new PetriNet();
@@ -39,6 +41,11 @@ public class ExponentialModelApproximation implements ModelApproximation{
 
         setInitialMarking(initialTokens);
 
+    }
+
+    public ExponentialModelApproximation(double mean, double variance, int initialTokens, double skip){
+        this(mean, variance, initialTokens);
+        this.skip = skip;
     }
     @Override
     public String getModelType() {
@@ -75,9 +82,17 @@ public class ExponentialModelApproximation implements ModelApproximation{
         //Generating Nodes
         Place Done = net.addPlace("Done");
         Place Start = net.addPlace("Start");
+        Place Queue = net.addPlace("Queue");
+        Transition Call = net.addTransition("Call");
+        Transition Skip = net.addTransition("Skip");
         Transition Service = net.addTransition("Service");
 
         //Generating Connectors
+        net.addPrecondition(Queue, Call);
+        net.addPostcondition(Call, Start);
+        net.addPrecondition(Queue, Skip);
+        net.addPostcondition(Skip, Done);
+
         net.addPrecondition(Start, Service);
         net.addPostcondition(Service, Done);
         return net;
@@ -92,13 +107,19 @@ public class ExponentialModelApproximation implements ModelApproximation{
 
     private void updateModel(){
         //Generating Properties
+        net.getTransition("Call").removeFeature(StochasticTransitionFeature.class);
+        net.getTransition("Call").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(1.0-this.skip), net)));
+        net.getTransition("Skip").removeFeature(StochasticTransitionFeature.class);
+        net.getTransition("Skip").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(this.skip), net)));
+
         net.getTransition("Service").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("Service").addFeature(StochasticTransitionFeature.newExponentialInstance(new BigDecimal(lambda), MarkingExpr.from("1", net)));
     }
 
     private void setInitialMarking(int initialTokens) {
         marking.setTokens(net.getPlace("Done"), 0);
-        marking.setTokens(net.getPlace("Start"), initialTokens);
+        marking.setTokens(net.getPlace("Start"), 0);
+        marking.setTokens(net.getPlace("Queue"), initialTokens);
     }
 
 

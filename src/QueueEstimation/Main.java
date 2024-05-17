@@ -65,6 +65,7 @@ public class Main {
             Logger.debug("Observed time: " + curEvent.eventTime);
             Logger.debug("Time left: " + (realWaitingTime - curEvent.eventTime));
             DescriptiveStatistics endServiceStats = new DescriptiveStatistics();
+            double skipProb = 0.0;
             // Compute mean and variance of the service time based on the events up to the current one
             for (int i = 0; i <= currentEvent; i++) {
                 Event event = filteredEvents.get(i);
@@ -72,7 +73,7 @@ public class Main {
                     endServiceStats.addValue(event.relativeEventTime);
                     Logger.debug("EndService event: " + event.relativeEventTime);
                 } else if (event instanceof LeaveQueue) {
-                    // TODO gestire gli skip
+                    skipProb += 1.0;
                 }
             }
                 // Compute mean and variance of the service time
@@ -83,18 +84,20 @@ public class Main {
                 Logger.debug("Variance: " + varianceES);
                 Logger.debug("Standard deviation: " + Math.sqrt(varianceES));
                 Logger.debug("CV: " + cv);
+                skipProb /= (currentEvent + 1);
+                Logger.debug("Skip probability: " + skipProb);
 
                 // Compute approximation
             if (numClients - currentEvent - 1 > 0) {
                 //TODO DUBBIO MA QUELLI CHE SONO GIà DENTRO A UN SERVER LI METTO IN START o in intermediate o altro?
                 if (cv > 1 + 1E-6) {
-                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(meanES, varianceES, (numClients  - currentEvent - 1), numServers));
+                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(meanES, varianceES, (numClients  - currentEvent - 1), numServers, skipProb));
                 } else if (Math.abs(cv - 1) <= 1E-6) {
-                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(meanES, varianceES, (numClients  - currentEvent - 1)));
+                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(meanES, varianceES, (numClients  - currentEvent - 1), skipProb));
                 } else if (cv < 1 && cv * cv > 0.5){
-                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(meanES, varianceES, (numClients - currentEvent - 1), numServers));
+                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(meanES, varianceES, (numClients - currentEvent - 1), numServers, skipProb));
                 } else {
-                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(meanES, varianceES, (numClients - currentEvent - 1), numServers));
+                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(meanES, varianceES, (numClients - currentEvent - 1), numServers, skipProb));
                 }
                 DescriptiveStatistics approx_stat = new DescriptiveStatistics();
                 for (int nRep = 0; nRep < REPETITIONS; nRep++) {

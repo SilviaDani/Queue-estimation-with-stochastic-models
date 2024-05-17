@@ -27,6 +27,8 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
     private double lambda0 = 1.0;
     private double lambda1 = 1.0;
 
+    private double skip = 0.1;
+
     public  HyperExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers){
         if (net == null){
             net = new PetriNet();
@@ -39,6 +41,11 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
         updateModel(nServers);
         setInitialMarking(initialTokens);
 
+    }
+
+    public HyperExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers, double skip){
+        this(mean, variance, initialTokens, nServers);
+        this.skip = skip;
     }
     @Override
     public String getModelType() {
@@ -76,12 +83,20 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
         Place Intermediate0 = net.addPlace("Intermediate0");
         Place Intermediate1 = net.addPlace("Intermediate1");
         Place Start = net.addPlace("Start");
+        Place Queue = net.addPlace("Queue");
+        Transition Call = net.addTransition("Call");
+        Transition Skip = net.addTransition("Skip");
         Transition Service0 = net.addTransition("Service0");
         Transition Service1 = net.addTransition("Service1");
         Transition Switch1_P = net.addTransition("Switch1_P");
         Transition SwitchP = net.addTransition("SwitchP");
 
         //Generating Connectors
+        net.addPrecondition(Queue, Call);
+        net.addPostcondition(Call, Start);
+        net.addPrecondition(Queue, Skip);
+        net.addPostcondition(Skip, Done);
+
         net.addPrecondition(Start, Switch1_P);
         net.addPrecondition(Intermediate1, Service1);
         net.addPostcondition(SwitchP, Intermediate0);
@@ -108,6 +123,11 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
 
     private void updateModel(int nServers){
         //Generating Properties
+        net.getTransition("Call").removeFeature(StochasticTransitionFeature.class);
+        net.getTransition("Call").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(1.0-this.skip), net)));
+        net.getTransition("Skip").removeFeature(StochasticTransitionFeature.class);
+        net.getTransition("Skip").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(this.skip), net)));
+
         net.getTransition("Service0").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("Service0").addFeature( StochasticTransitionFeature.newExponentialInstance(new BigDecimal(lambda0), MarkingExpr.from("1", net)));
         net.getTransition("Service1").removeFeature(StochasticTransitionFeature.class);
@@ -126,7 +146,8 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
         marking.setTokens(net.getPlace("Done"), 0);
         marking.setTokens(net.getPlace("Intermediate0"), 0);
         marking.setTokens(net.getPlace("Intermediate1"), 0);
-        marking.setTokens(net.getPlace("Start"), initialTokens);
+        marking.setTokens(net.getPlace("Start"), 0);
+        marking.setTokens(net.getPlace("Queue"), initialTokens);
     }
 
 
