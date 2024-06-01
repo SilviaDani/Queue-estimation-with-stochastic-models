@@ -3,8 +3,14 @@ package QueueEstimation.Approximation;
 import QueueEstimation.Approximation.ModelApproximation;
 import Utils.Logger;
 import Utils.WorkingPrintStreamLogger;
+import org.oristool.models.gspn.GSPNTransient;
 import org.oristool.models.pn.Priority;
 import org.oristool.models.stpn.MarkingExpr;
+import org.oristool.models.stpn.RewardRate;
+import org.oristool.models.stpn.TransientSolution;
+import org.oristool.models.stpn.onegen.OneGenTransient;
+import org.oristool.models.stpn.trans.TreeTransient;
+import org.oristool.models.stpn.trees.DeterministicEnablingState;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
 import org.oristool.petrinet.*;
 import org.oristool.simulator.Sequencer;
@@ -12,11 +18,14 @@ import org.oristool.simulator.rewards.ContinuousRewardTime;
 import org.oristool.simulator.rewards.RewardEvaluator;
 import org.oristool.simulator.stpn.STPNSimulatorComponentsFactory;
 import org.oristool.simulator.stpn.TransientMarkingConditionProbability;
+import org.oristool.util.Pair;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 
 public class LowCVHypoExponentialModelApproximation implements ModelApproximation {
     static PetriNet net = null;
@@ -124,5 +133,40 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
     @Override
     public String getModelType() {
         return "LOWCVHYPOEXP";
+    }
+
+    @Override
+    public HashMap<Double, Double>  analyzeModel() { // FIXME it's reeeeeaaaaalllllly slow
+        double step = 0.1;
+
+        TransientSolution<Marking, Marking> solution = TreeTransient.builder()
+                .timeBound(new BigDecimal("100.0"))
+                .timeStep(new BigDecimal(step))
+                .build().compute(net, marking);
+
+        TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Start==0,1,0)");
+
+        if (false) { // FIXME remove this
+            double[] thresholds = {0.1, 0.2, 0.3, 0.4, 0.5};
+            int t_index = 0;
+            HashMap<Double, Double> ETAs = new HashMap<>();
+            for (int t = 0; t < reward.getSolution().length; t++) {
+                if (reward.getSolution()[t][0][0] > thresholds[t_index]) {
+                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * step);
+                    ETAs.put(t * step, thresholds[t_index]);
+                    t_index++;
+                    if (t_index == thresholds.length) {
+                        break;
+                    }
+                }
+            }
+            return ETAs;
+        }else{
+            HashMap<Double, Double> transientSolution = new HashMap<>();
+            for (int t = 0; t < reward.getSolution().length; t++) {
+                transientSolution.put(t * step, reward.getSolution()[t][0][0]);
+            }
+            return transientSolution;
+        }
     }
 }

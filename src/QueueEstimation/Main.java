@@ -1,12 +1,10 @@
 package QueueEstimation;
 
 import QueueEstimation.Approximation.*;
-import Utils.ApproxParser;
-import Utils.ChartPlotter;
-import Utils.Logger;
-import Utils.Parser;
+import Utils.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
@@ -15,22 +13,23 @@ import javax.swing.*;
 public class Main {
     final static int REPETITIONS = 100;
     public static void main(String[] args) {
-        int numServers = 3;
-        int numClients = 20;
+        int numServers = 2;
+        int numClients = 6; // Tagged Customer included!
 
         // Create the servers
         ArrayList<Server> servers = new ArrayList<>();
         for (int i = 0; i < numServers; i++) {
-            // servers.add(new ExpServer(2));
-            servers.add(new UniServer(1, 10));
+            servers.add(new ExpServer(2));
+            //servers.add(new UniServer(1, 10));
         }
 
         // Create the STPN model
         STPN stpn = new STPN(servers, numClients);
         ApproxParser approxParser = new ApproxParser();
+        HashMap<Double, Double> trueTransient = null;
         try {
-            stpn.makeModel();
-        }catch (Exception e){
+            trueTransient = stpn.makeModel();
+        } catch (Exception e) {
             System.out.println("Error creating the model");
         }
         ModelApproximator modelApproximator = new ModelApproximator();
@@ -38,9 +37,9 @@ public class Main {
 
         // Troviamo il reale tempo di attesa e il tempo di ciascun evento per il plot
         ArrayList<Event> filteredEvents = new ArrayList(); // arraylist di soli eventi fine servizio e skip
-        for (int currentEvent=0; currentEvent<events.size(); currentEvent++) {
+        for (int currentEvent = 0; currentEvent < events.size(); currentEvent++) {
             Event curEvent = events.get(currentEvent);
-            if (curEvent instanceof EndService || curEvent instanceof LeaveQueue){
+            if (curEvent instanceof EndService || curEvent instanceof LeaveQueue) {
                 filteredEvents.add(curEvent);
             }
         }
@@ -55,72 +54,57 @@ public class Main {
         ArrayList<Double> estimations = new ArrayList();
         ArrayList<Double> stds = new ArrayList();
 
-        for (int currentEvent = 1; currentEvent < filteredEvents.size(); currentEvent++){
-            Logger.debug("-------------------------------------------------");
-            Logger.debug("Current event: " + currentEvent);
-            Logger.debug(filteredEvents.get(currentEvent).toString());
-            // Get the current event
+        ArrayList<Double> JSDs = new ArrayList(); // it starts from 1 because we need at least 2 events to compute the mean and variance
+
+        for (int currentEvent = 0; currentEvent < filteredEvents.size(); currentEvent++) {
+            // Get current event
             Event curEvent = filteredEvents.get(currentEvent);
             obsTimes.add(curEvent.eventTime);
-            Logger.debug("Observed time: " + curEvent.eventTime);
-            Logger.debug("Time left: " + (realWaitingTime - curEvent.eventTime));
-            DescriptiveStatistics endServiceStats = new DescriptiveStatistics();
-            double skipProb = 0.0;
-            // Compute mean and variance of the service time based on the events up to the current one
-            for (int i = 0; i <= currentEvent; i++) {
-                Event event = filteredEvents.get(i);
-                if (event instanceof EndService) {
-                    endServiceStats.addValue(event.relativeEventTime);
-                    Logger.debug("EndService event: " + event.relativeEventTime);
-                } else if (event instanceof LeaveQueue) {
-                    skipProb += 1.0;
+            // Compute mean and variance based on the simulated events up to the current one IF THERE ARE AT LEAST 2 EVENTS
+            if (currentEvent >= 1){
+                DescriptiveStatistics serviceStats = new DescriptiveStatistics();
+                double skipProb = 0.0;
+                for (int i = 0; i <= currentEvent; i++) {
+                    Event event = filteredEvents.get(i);
+                    if (event instanceof EndService) {
+                        serviceStats.addValue(event.relativeEventTime);
+                    } else if (event instanceof LeaveQueue) {
+                        skipProb += 1.0;
+                    }
                 }
-            }
-                // Compute mean and variance of the service time
-                double meanES = endServiceStats.getMean() / numServers;
-                double varianceES = endServiceStats.getVariance() / (numServers * numServers);
-                double cv = Math.sqrt(varianceES) / meanES;
-                Logger.debug("Mean: " + meanES);
-                Logger.debug("Variance: " + varianceES);
-                Logger.debug("Standard deviation: " + Math.sqrt(varianceES));
-                Logger.debug("CV: " + cv);
+                double mean = serviceStats.getMean() / numServers;
+                double variance = serviceStats.getVariance() / (numServers * numServers);
+                double cv = Math.sqrt(variance) / mean;
                 skipProb /= (currentEvent + 1);
-                Logger.debug("Skip probability: " + skipProb);
-
+                Logger.debug("Mean: " + mean + "\nVariance: " + variance + "\nCV: " + cv + "\nSkip probability: " + skipProb);
                 // Compute approximation
-            if (numClients - currentEvent - 1 > 0) {
-                //TODO DUBBIO MA QUELLI CHE SONO GIà DENTRO A UN SERVER LI METTO IN START o in intermediate o altro?
-                if (cv > 1 + 1E-6) {
-                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(meanES, varianceES, (numClients  - currentEvent - 1), numServers, skipProb));
+                int queueSize = numClients - (currentEvent + 1);
+                if (cv - 1 > 1E-6) {
+                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb));
                 } else if (Math.abs(cv - 1) <= 1E-6) {
-                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(meanES, varianceES, (numClients  - currentEvent - 1), skipProb));
-                } else if (cv < 1 && cv * cv > 0.5){
-                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(meanES, varianceES, (numClients - currentEvent - 1), numServers, skipProb));
+                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, queueSize, skipProb));
+                } else if (cv < 1 && cv * cv > 0.5) {
+                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb));
                 } else {
-                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(meanES, varianceES, (numClients - currentEvent - 1), numServers, skipProb));
+                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb));
                 }
-                DescriptiveStatistics approx_stat = new DescriptiveStatistics();
-                for (int nRep = 0; nRep < REPETITIONS; nRep++) {
-                    modelApproximator.approximateModel();
-                    ArrayList<Event> approxEvents = ApproxParser.getApproximatedETA("log_approx.txt", modelApproximator);
-                    double eta = approxEvents.getLast().eventTime;
-                    // TODO: modificare in base alla risposta di Riccardo -> double eta = approxEvents.get(approxEvents.size() - numServers).eventTime;
-                    approx_stat.addValue(eta);
-                }
-                Logger.debug("Estimated time: " + approx_stat.getMean());
-                estimations.add(approx_stat.getMean());
-                stds.add(approx_stat.getStandardDeviation());
-            } else {
-                estimations.add(0.0);
-                stds.add(0.0);
+                HashMap<Double, Double> approxTransient = modelApproximator.analyzeModel();
+                // Measure the distance between the real distribution and the approximated
+                double jsd = JensenShannonDistance.computeJensenShannonDistance(trueTransient, approxTransient); // TODO implement this
+                JSDs.add(jsd);
             }
-                //TODO ritornare la stima del tempo atteso (da modificare in base alla risposta di Riccardo)
-                //estimations.add()
         }
-        ChartPlotter chartPlotter = new ChartPlotter("Ground Truth vs Approximation", obsTimes, estimations, stds);
-        chartPlotter.setSize(800, 800);
-        chartPlotter.setLocationRelativeTo(null);
-        chartPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        chartPlotter.setVisible(true);
+        //print JSDs
+        for (int i = 0; i < JSDs.size(); i++) {
+            Logger.debug("JSD " + i + ": " + JSDs.get(i));
+        }
+
+        if (false) {
+            ChartPlotter chartPlotter = new ChartPlotter("Ground Truth vs Approximation", obsTimes, estimations, stds);
+            chartPlotter.setSize(800, 800);
+            chartPlotter.setLocationRelativeTo(null);
+            chartPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            chartPlotter.setVisible(true);
+        }
     }
 }

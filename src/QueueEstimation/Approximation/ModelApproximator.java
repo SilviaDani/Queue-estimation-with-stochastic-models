@@ -1,5 +1,7 @@
 package QueueEstimation.Approximation;
 
+import java.util.HashMap;
+
 public class ModelApproximator {
     private ModelApproximation modelApproximation;
 
@@ -13,5 +15,9 @@ public class ModelApproximator {
 
     public String getModelType(){
         return modelApproximation.getModelType();
+    }
+
+    public HashMap<Double, Double> analyzeModel(){
+        return modelApproximation.analyzeModel();
     }
 }

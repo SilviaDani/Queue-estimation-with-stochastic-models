@@ -3,7 +3,9 @@ package QueueEstimation;
 import Utils.WorkingPrintStreamLogger;
 import org.oristool.models.pn.Priority;
 import org.oristool.models.stpn.MarkingExpr;
+import org.oristool.models.stpn.RewardRate;
 import org.oristool.models.stpn.TransientSolution;
+import org.oristool.models.stpn.trans.TreeTransient;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
 import org.oristool.petrinet.*;
 import org.oristool.simulator.*;
@@ -28,7 +30,7 @@ public class STPN<R,S> {
         this.clients = clients;
     }
 
-    public TransientSolution<R, S> makeModel() throws IOException {
+    public HashMap<Double, Double> makeModel() throws IOException {
         PetriNet net = new PetriNet();
         Marking marking = new Marking();
         //Generating Queue Node
@@ -100,7 +102,19 @@ public class STPN<R,S> {
         RewardEvaluator re2 = new RewardEvaluator(r2, 1);
         s.simulate();
 
-        return null;
+        // compute the transient solution
+        double step = 1;
+        double limit = 50.0;
+        TransientSolution<Marking, Marking> solution = TreeTransient.builder()
+                .timeBound(new BigDecimal(limit))
+                .timeStep(new BigDecimal(step))
+                .build().compute(net, marking);
+        TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Queue==0,1,0)");
+        HashMap<Double, Double> transientSolution = new HashMap<>();
+        for (int t = 0; t < reward.getSolution().length; t++) {
+            transientSolution.put(t * step, reward.getSolution()[t][0][0]);
+        }
+        return transientSolution;
     }
 
 }

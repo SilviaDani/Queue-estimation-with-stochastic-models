@@ -2,8 +2,11 @@ package QueueEstimation.Approximation;
 
 import Utils.Logger;
 import Utils.WorkingPrintStreamLogger;
+import org.oristool.models.gspn.GSPNTransient;
 import org.oristool.models.pn.Priority;
 import org.oristool.models.stpn.MarkingExpr;
+import org.oristool.models.stpn.RewardRate;
+import org.oristool.models.stpn.TransientSolution;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
 import org.oristool.petrinet.*;
 import org.oristool.simulator.Sequencer;
@@ -11,11 +14,14 @@ import org.oristool.simulator.rewards.ContinuousRewardTime;
 import org.oristool.simulator.rewards.RewardEvaluator;
 import org.oristool.simulator.stpn.STPNSimulatorComponentsFactory;
 import org.oristool.simulator.stpn.TransientMarkingConditionProbability;
+import org.oristool.util.Pair;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ExponentialModelApproximation implements ModelApproximation{
     static PetriNet net = null; // We make this static because the approximant model is the same for every hyperexp model, the only things we change are the parameters
@@ -51,6 +57,41 @@ public class ExponentialModelApproximation implements ModelApproximation{
     public String getModelType() {
         return "EXP";
     }
+
+    @Override
+    public HashMap<Double, Double> analyzeModel() {
+        double step = 0.1;
+        Pair<Map<Marking, Integer>, double[][]> result = GSPNTransient.builder()
+                .timePoints(0.0, 100.0, step)
+                .build().compute(net, marking); // FIXME check if 100.0 as end time is enough (or it is too much)
+
+        TransientSolution<Marking, Marking> solution = TransientSolution.fromArray(result.second(), step, result.first(), marking);
+
+        TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Start==0,1,0)");
+        if (false) {// FIXME remove this
+            double[] thresholds = {0.1, 0.2, 0.3, 0.4, 0.5};
+            int t_index = 0;
+            HashMap<Double, Double> ETAs = new HashMap<>();
+            for (int t = 0; t < reward.getSolution().length; t++) {
+                if (reward.getSolution()[t][0][0] > thresholds[t_index]) {
+                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * step);
+                    ETAs.put(t * step, thresholds[t_index]);
+                    t_index++;
+                    if (t_index == thresholds.length) {
+                        break;
+                    }
+                }
+            }
+        return ETAs;
+        }else{
+            HashMap<Double, Double> transientSolution = new HashMap<>();
+            for (int t = 0; t < reward.getSolution().length; t++) {
+                transientSolution.put(t * step, reward.getSolution()[t][0][0]);
+            }
+        return transientSolution;
+        }
+    }
+
     @Override
     public void approximateModel() {
         File f = new File("log_approx.txt");

@@ -2,8 +2,10 @@ package QueueEstimation.Approximation;
 
 import Utils.Logger;
 import Utils.WorkingPrintStreamLogger;
-import org.oristool.models.pn.Priority;
+import org.oristool.models.gspn.GSPNTransient;
 import org.oristool.models.stpn.MarkingExpr;
+import org.oristool.models.stpn.RewardRate;
+import org.oristool.models.stpn.TransientSolution;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
 import org.oristool.petrinet.*;
 import org.oristool.simulator.Sequencer;
@@ -11,13 +13,14 @@ import org.oristool.simulator.rewards.ContinuousRewardTime;
 import org.oristool.simulator.rewards.RewardEvaluator;
 import org.oristool.simulator.stpn.STPNSimulatorComponentsFactory;
 import org.oristool.simulator.stpn.TransientMarkingConditionProbability;
+import org.oristool.util.Pair;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 public class HypoExponentialModelApproximation implements ModelApproximation{
     static PetriNet net = null; // We make this static because the approximant model is the same for every hyperexp model, the only things we change are the parameters
@@ -80,6 +83,40 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         }
     }
 
+    @Override
+    public HashMap<Double, Double> analyzeModel(){ //Since this model is only made of IMM and EXP transitions, it is a GSPN
+        double step = 0.1;
+        Pair<Map<Marking, Integer>, double[][]> result = GSPNTransient.builder()
+                .timePoints(0.0, 100.0, step)
+                .build().compute(net, marking); // FIXME check if 100.0 as end time is enough (or it is too much)
+
+        TransientSolution<Marking, Marking> solution = TransientSolution.fromArray(result.second(), step, result.first(), marking);
+
+        TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Start==0,1,0)");
+        if (false) {// FIXME remove this
+            double[] thresholds = {0.1, 0.2, 0.3, 0.4, 0.5};
+            int t_index = 0;
+            HashMap<Double, Double> ETAs = new HashMap<>();
+            for (int t = 0; t < reward.getSolution().length; t++) {
+                if (reward.getSolution()[t][0][0] > thresholds[t_index]) {
+                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * step);
+                    ETAs.put(t * step, thresholds[t_index]);
+                    t_index++;
+                    if (t_index == thresholds.length) {
+                        break;
+                    }
+                }
+            }
+            return ETAs;
+        }else{
+            HashMap<Double, Double> transientSolution = new HashMap<>();
+            for (int t = 0; t < reward.getSolution().length; t++) {
+                transientSolution.put(t * step, reward.getSolution()[t][0][0]);
+            }
+            return transientSolution;
+        }
+    }
+
     private PetriNet createNet(){
         Place Done = net.addPlace("Done");
         Place Intermediate = net.addPlace("Intermediate");
@@ -95,6 +132,7 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         net.addPostcondition(Call, Start);
         net.addPrecondition(Queue, Skip);
         net.addPostcondition(Skip, Done);
+
 
         net.addPrecondition(Start, ServiceERL);
         net.addPostcondition(ServiceEXP, Done);
@@ -121,10 +159,8 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         Logger.debug("lambdaErl: " + this.lambdaErl);
         Logger.debug("lambdaExp: " + this.lambdaExp);*/
         double cv = Math.sqrt(variance)/mean;
-        this.nErl = 1;
         this.lambdaErl = (2/mean) / (1 + Math.sqrt(1 + 2 * (cv * cv - 1)));
         this.lambdaExp = (2/mean) / (1 - Math.sqrt(1 + 2 * (cv * cv - 1)));
-        Logger.debug("nErl: " + this.nErl);
         Logger.debug("lambdaErl: " + this.lambdaErl);
         Logger.debug("lambdaExp: " + this.lambdaExp);
     }
@@ -139,7 +175,7 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         net.getTransition("ServiceERL").removeFeature(EnablingFunction.class);
         net.getTransition("ServiceERL").addFeature(new EnablingFunction("Intermediate < "+ nServers)); // FIXME: check if it's correct
         net.getTransition("ServiceERL").removeFeature(StochasticTransitionFeature.class);
-        net.getTransition("ServiceERL").addFeature(StochasticTransitionFeature.newErlangInstance(nErl, new BigDecimal(lambdaErl)));
+        net.getTransition("ServiceERL").addFeature(StochasticTransitionFeature.newExponentialInstance(new BigDecimal(lambdaErl), MarkingExpr.from("1", net)));
         net.getTransition("ServiceEXP").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("ServiceEXP").addFeature(StochasticTransitionFeature.newExponentialInstance(new BigDecimal(lambdaExp), MarkingExpr.from("1", net)));
 
