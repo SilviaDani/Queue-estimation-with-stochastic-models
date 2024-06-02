@@ -33,8 +33,10 @@ public class ExponentialModelApproximation implements ModelApproximation{
     double epsilon = 1E-6;
 
     private double skip = 0.1;
+    private double timeLimit;
+    private double timeStep;
 
-    public ExponentialModelApproximation(double mean, double variance, int initialTokens){
+    public ExponentialModelApproximation(double mean, double variance, int initialTokens, double timeLimit, double timeStep){
         if (net == null) {
             net = new PetriNet();
             net = createNet();
@@ -46,11 +48,13 @@ public class ExponentialModelApproximation implements ModelApproximation{
         updateModel();
 
         setInitialMarking(initialTokens);
+        this.timeLimit = timeLimit;
+        this.timeStep = timeStep;
 
     }
 
-    public ExponentialModelApproximation(double mean, double variance, int initialTokens, double skip){
-        this(mean, variance, initialTokens);
+    public ExponentialModelApproximation(double mean, double variance, int initialTokens, double skip, double timeLimit, double timeStep){
+        this(mean, variance, initialTokens, timeLimit, timeStep);
         this.skip = skip;
     }
     @Override
@@ -60,12 +64,11 @@ public class ExponentialModelApproximation implements ModelApproximation{
 
     @Override
     public HashMap<Double, Double> analyzeModel() {
-        double step = 0.1;
         Pair<Map<Marking, Integer>, double[][]> result = GSPNTransient.builder()
-                .timePoints(0.0, 100.0, step)
+                .timePoints(0.0, timeLimit, timeStep)
                 .build().compute(net, marking); // FIXME check if 100.0 as end time is enough (or it is too much)
 
-        TransientSolution<Marking, Marking> solution = TransientSolution.fromArray(result.second(), step, result.first(), marking);
+        TransientSolution<Marking, Marking> solution = TransientSolution.fromArray(result.second(), timeStep, result.first(), marking);
 
         TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Start==0,1,0)");
         if (false) {// FIXME remove this
@@ -74,8 +77,8 @@ public class ExponentialModelApproximation implements ModelApproximation{
             HashMap<Double, Double> ETAs = new HashMap<>();
             for (int t = 0; t < reward.getSolution().length; t++) {
                 if (reward.getSolution()[t][0][0] > thresholds[t_index]) {
-                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * step);
-                    ETAs.put(t * step, thresholds[t_index]);
+                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * timeStep);
+                    ETAs.put(t * timeStep, thresholds[t_index]);
                     t_index++;
                     if (t_index == thresholds.length) {
                         break;
@@ -86,7 +89,7 @@ public class ExponentialModelApproximation implements ModelApproximation{
         }else{
             HashMap<Double, Double> transientSolution = new HashMap<>();
             for (int t = 0; t < reward.getSolution().length; t++) {
-                transientSolution.put(t * step, reward.getSolution()[t][0][0]);
+                transientSolution.put(t * timeStep, reward.getSolution()[t][0][0]);
             }
         return transientSolution;
         }

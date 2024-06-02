@@ -5,6 +5,7 @@ import Utils.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Objects;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
@@ -15,16 +16,18 @@ public class Main {
     public static void main(String[] args) {
         int numServers = 2;
         int numClients = 6; // Tagged Customer included!
+        double timeLimit = 75.0;
+        double timeStep = 1;
 
         // Create the servers
         ArrayList<Server> servers = new ArrayList<>();
         for (int i = 0; i < numServers; i++) {
             servers.add(new ExpServer(2));
-            //servers.add(new UniServer(1, 10));
+            //servers.add(new UniServer(5, 10));
         }
 
         // Create the STPN model
-        STPN stpn = new STPN(servers, numClients);
+        STPN stpn = new STPN(servers, numClients, timeLimit, timeStep);
         ApproxParser approxParser = new ApproxParser();
         HashMap<Double, Double> trueTransient = null;
         try {
@@ -42,6 +45,9 @@ public class Main {
             if (curEvent instanceof EndService || curEvent instanceof LeaveQueue) {
                 filteredEvents.add(curEvent);
             }
+            if ((curEvent instanceof StartService || curEvent instanceof LeaveQueue) && Objects.equals(curEvent.clientID, String.valueOf(numClients - 1))){
+                filteredEvents.add(new TaggedCustomerBeingProcessed(curEvent.eventTime, curEvent.serverID, curEvent.clientID));
+            }
         }
 
         double realWaitingTime = filteredEvents.getLast().eventTime;
@@ -57,9 +63,20 @@ public class Main {
         ArrayList<Double> JSDs = new ArrayList(); // it starts from 1 because we need at least 2 events to compute the mean and variance
 
         for (int currentEvent = 0; currentEvent < filteredEvents.size(); currentEvent++) {
+            /*
+            String progress = "";
+            for (int i = 0; i < currentEvent; i++)
+                progress += "*";
+            Logger.debug(progress);
+            */
+            Logger.debug("Event " + currentEvent + " of " + filteredEvents.size());
             // Get current event
             Event curEvent = filteredEvents.get(currentEvent);
             obsTimes.add(curEvent.eventTime);
+            if (curEvent instanceof TaggedCustomerBeingProcessed) { // Tagged customer is being served
+                Logger.debug("Tagged customer is being served, exiting...");
+                break;
+            }
             // Compute mean and variance based on the simulated events up to the current one IF THERE ARE AT LEAST 2 EVENTS
             if (currentEvent >= 1){
                 DescriptiveStatistics serviceStats = new DescriptiveStatistics();
@@ -73,28 +90,28 @@ public class Main {
                     }
                 }
                 double mean = serviceStats.getMean() / numServers;
-                double variance = serviceStats.getVariance() / (numServers * numServers);
+                double variance = (serviceStats.getVariance() + 1e-6) / (numServers * numServers);
                 double cv = Math.sqrt(variance) / mean;
                 skipProb /= (currentEvent + 1);
                 Logger.debug("Mean: " + mean + "\nVariance: " + variance + "\nCV: " + cv + "\nSkip probability: " + skipProb);
                 // Compute approximation
                 int queueSize = numClients - (currentEvent + 1);
                 if (cv - 1 > 1E-6) {
-                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb));
+                    modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb, timeLimit, timeStep));
                 } else if (Math.abs(cv - 1) <= 1E-6) {
-                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, queueSize, skipProb));
+                    modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, queueSize, skipProb, timeLimit, timeStep));
                 } else if (cv < 1 && cv * cv > 0.5) {
-                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb));
+                    modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb, timeLimit, timeStep));
                 } else {
-                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb));
+                    modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb, timeLimit, timeStep));
                 }
                 HashMap<Double, Double> approxTransient = modelApproximator.analyzeModel();
                 // Measure the distance between the real distribution and the approximated
-                double jsd = JensenShannonDistance.computeJensenShannonDistance(trueTransient, approxTransient); // TODO implement this
+                double jsd = JensenShannonDivergence.computeJensenShannonDivergence(ConverterCDFToPDF.convertCDFToPDF(trueTransient), ConverterCDFToPDF.convertCDFToPDF(approxTransient)); // TODO implement this
                 JSDs.add(jsd);
             }
         }
-        //print JSDs
+        // print the JSDs
         for (int i = 0; i < JSDs.size(); i++) {
             Logger.debug("JSD " + i + ": " + JSDs.get(i));
         }

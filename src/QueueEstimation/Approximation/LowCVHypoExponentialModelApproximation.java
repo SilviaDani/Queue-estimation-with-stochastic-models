@@ -35,7 +35,10 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
     private double lambda = 1.0;
 
     private double skip;
-    public LowCVHypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers) {
+
+    private double timeLimit;
+    private double timeStep;
+    public LowCVHypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers, double timeLimit, double timeStep){
         if (net == null){
             net = new PetriNet();
             net = createNet();
@@ -46,10 +49,12 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         computeParameters(mean, variance);
         updateModel(nServers);
         setInitialMarking(initialTokens);
+        this.timeLimit = timeLimit;
+        this.timeStep = timeStep;
     }
 
-    public LowCVHypoExponentialModelApproximation (double mean, double variance, int initialTokens, int nServers, double skip){
-        this(mean, variance, initialTokens, nServers);
+    public LowCVHypoExponentialModelApproximation (double mean, double variance, int initialTokens, int nServers, double skip, double timeLimit, double timeStep){
+        this(mean, variance, initialTokens, nServers, timeLimit, timeStep);
         this.skip = skip;
     }
 
@@ -115,8 +120,8 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
             WorkingPrintStreamLogger l = new WorkingPrintStreamLogger(new PrintStream(fos), true);
             Sequencer s = new Sequencer(net, marking, new STPNSimulatorComponentsFactory(), l);
 
-            BigDecimal timeLimit = new BigDecimal(1000);
-            BigDecimal timeStep = new BigDecimal("0.1");
+            BigDecimal timeLimit = new BigDecimal(this.timeLimit);
+            BigDecimal timeStep = new BigDecimal(this.timeStep);
             int timePoints = (timeLimit.divide(timeStep)).intValue() + 1;
 
             TransientMarkingConditionProbability r1 =
@@ -137,11 +142,9 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
 
     @Override
     public HashMap<Double, Double>  analyzeModel() { // FIXME it's reeeeeaaaaalllllly slow
-        double step = 0.1;
-
         TransientSolution<Marking, Marking> solution = TreeTransient.builder()
-                .timeBound(new BigDecimal("100.0"))
-                .timeStep(new BigDecimal(step))
+                .timeBound(new BigDecimal(timeLimit))
+                .timeStep(new BigDecimal(timeStep))
                 .build().compute(net, marking);
 
         TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Start==0,1,0)");
@@ -152,8 +155,8 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
             HashMap<Double, Double> ETAs = new HashMap<>();
             for (int t = 0; t < reward.getSolution().length; t++) {
                 if (reward.getSolution()[t][0][0] > thresholds[t_index]) {
-                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * step);
-                    ETAs.put(t * step, thresholds[t_index]);
+                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * timeStep);
+                    ETAs.put(t * timeStep, thresholds[t_index]);
                     t_index++;
                     if (t_index == thresholds.length) {
                         break;
@@ -164,7 +167,7 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         }else{
             HashMap<Double, Double> transientSolution = new HashMap<>();
             for (int t = 0; t < reward.getSolution().length; t++) {
-                transientSolution.put(t * step, reward.getSolution()[t][0][0]);
+                transientSolution.put(t * timeStep, reward.getSolution()[t][0][0]);
             }
             return transientSolution;
         }
