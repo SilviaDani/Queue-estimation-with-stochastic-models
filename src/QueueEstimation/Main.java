@@ -60,8 +60,8 @@ public class Main {
         ArrayList<Double> estimations = new ArrayList();
         ArrayList<Double> stds = new ArrayList();
 
+        HashMap<Double, Double> approxTransientBefore = null;
         ArrayList<Double> JSDs = new ArrayList(); // it starts from 1 because we need at least 2 events to compute the mean and variance
-
         for (int currentEvent = 0; currentEvent < filteredEvents.size(); currentEvent++) {
             /*
             String progress = "";
@@ -106,6 +106,16 @@ public class Main {
                     modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb, timeLimit, timeStep));
                 }
                 HashMap<Double, Double> approxTransient = modelApproximator.analyzeModel();
+                if (currentEvent >= 2){ //perchè l'aggiornamento parte dopo aver contato 2 eventi TODO se so cambia l'if esterno cambiare anche questo
+                    // Plot like Rogge-Solti
+                    String title = "before vs after " + currentEvent;
+                    ReggeSoltiPlotter reggeSoltiPlotter = new ReggeSoltiPlotter(title, approxTransientBefore, approxTransient, currentEvent);
+                    reggeSoltiPlotter.setSize(800, 800);
+                    reggeSoltiPlotter.setLocationRelativeTo(null);
+                    reggeSoltiPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    reggeSoltiPlotter.setVisible(true);
+                }
+                approxTransientBefore = approxTransient;
                 // Measure the distance between the real distribution and the approximated
                 double jsd = JensenShannonDivergence.computeJensenShannonDivergence(ConverterCDFToPDF.convertCDFToPDF(trueTransient), ConverterCDFToPDF.convertCDFToPDF(approxTransient)); // TODO implement this
                 JSDs.add(jsd);
