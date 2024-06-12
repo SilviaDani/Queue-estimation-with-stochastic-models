@@ -15,8 +15,8 @@ public class Main {
     final static int REPETITIONS = 100;
     public static void main(String[] args) {
         int numServers = 2;
-        int numClients = 6; // Tagged Customer included!
-        double timeLimit = 75.0;
+        int numClients = 8; // Tagged Customer included!
+        double timeLimit = 50.0;
         double timeStep = 1;
 
         // Create the servers
@@ -27,7 +27,7 @@ public class Main {
         }
 
         // Create the STPN model
-        STPN stpn = new STPN(servers, numClients, timeLimit, timeStep);
+        STPN stpn = new STPN(servers, numClients,timeLimit, timeStep);
         ApproxParser approxParser = new ApproxParser();
         HashMap<Double, Double> trueTransient = null;
         try {
@@ -69,7 +69,7 @@ public class Main {
                 progress += "*";
             Logger.debug(progress);
             */
-            Logger.debug("Event " + currentEvent + " of " + filteredEvents.size());
+            Logger.debug("Event " + currentEvent + " of " + (filteredEvents.size() - 1));
             // Get current event
             Event curEvent = filteredEvents.get(currentEvent);
             obsTimes.add(curEvent.eventTime);
