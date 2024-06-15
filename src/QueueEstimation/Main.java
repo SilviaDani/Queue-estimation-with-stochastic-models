@@ -15,14 +15,15 @@ public class Main {
     final static int REPETITIONS = 100;
     public static void main(String[] args) {
         int numServers = 2;
-        int numClients = 8; // Tagged Customer included!
-        double timeLimit = 50.0;
+        int numClients = 6; // Tagged Customer included!
+        double timeLimit = 25.0;
         double timeStep = 1;
+
 
         // Create the servers
         ArrayList<Server> servers = new ArrayList<>();
         for (int i = 0; i < numServers; i++) {
-            servers.add(new ExpServer(2));
+            servers.add(new ExpServer(0.5));
             //servers.add(new UniServer(5, 10));
         }
 
@@ -117,7 +118,7 @@ public class Main {
                 }
                 approxTransientBefore = approxTransient;
                 // Measure the distance between the real distribution and the approximated
-                double jsd = JensenShannonDivergence.computeJensenShannonDivergence(ConverterCDFToPDF.convertCDFToPDF(trueTransient), ConverterCDFToPDF.convertCDFToPDF(approxTransient)); // TODO implement this
+                double jsd = JensenShannonDivergence.computeJensenShannonDivergence(ConverterCDFToPDF.convertCDFToPDF(trueTransient), ConverterCDFToPDF.convertCDFToPDF(approxTransient)); // FIXME controllare che funzioni
                 JSDs.add(jsd);
             }
         }
