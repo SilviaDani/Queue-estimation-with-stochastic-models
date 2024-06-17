@@ -14,9 +14,9 @@ import javax.swing.*;
 public class Main {
     final static int REPETITIONS = 100;
     public static void main(String[] args) {
-        int numServers = 2;
-        int numClients = 6; // Tagged Customer included!
-        double timeLimit = 25.0;
+        int numServers = 1;
+        int numClients = 10; // Tagged Customer included!
+        double timeLimit = 50.0;
         double timeStep = 1;
 
 
@@ -96,7 +96,8 @@ public class Main {
                 skipProb /= (currentEvent + 1);
                 Logger.debug("Mean: " + mean + "\nVariance: " + variance + "\nCV: " + cv + "\nSkip probability: " + skipProb);
                 // Compute approximation
-                int queueSize = numClients - (currentEvent + 1);
+                //int queueSize = numClients - (currentEvent + 1);
+                int queueSize = numClients;
                 if (cv - 1 > 1E-6) {
                     modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb, timeLimit, timeStep));
                 } else if (Math.abs(cv - 1) <= 1E-6) {
@@ -124,7 +125,7 @@ public class Main {
         }
         // print the JSDs
         for (int i = 0; i < JSDs.size(); i++) {
-            Logger.debug("JSD " + i + ": " + JSDs.get(i));
+            Logger.debug("JSD " + (i+1) + ": " + JSDs.get(i));
         }
 
         if (false) {
