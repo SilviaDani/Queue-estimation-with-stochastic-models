@@ -17,7 +17,7 @@ public class Main {
         int numServers = 1;
         int numClients = 10; // Tagged Customer included!
         double timeLimit = 50.0;
-        double timeStep = 1;
+        double timeStep = 1; //FIXME capire perché se questo è 0.1 la JSD diventa altissima
 
 
         // Create the servers

@@ -18,7 +18,8 @@ public class Parser {
             "ToBeServed",
             "SkipTransition",
             "FirstService",
-            "Service"
+            "Service",
+            "LastClientInQueueIsCalled"
     };
 
     protected static boolean isTransitionLine(String line){
@@ -71,6 +72,9 @@ public class Parser {
                         events.add(new EndService(currentTime,currentTime - entranceTimes.get(serverID), serverID, String.valueOf(firstClients)));
                         entranceTimes.put(serverID, currentTime);
                         firstClients++;
+                    }else if(line.trim().startsWith("LastClientInQueueIsCalled")){
+                        events.add(new StartService(currentTime, -1, String.valueOf(-1), String.valueOf(clients)));
+                        clients++;
                     }
                     currentETAs.clear();
                 }
