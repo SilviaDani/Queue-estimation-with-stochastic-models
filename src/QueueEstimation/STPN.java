@@ -25,17 +25,16 @@ public class STPN<R,S> {
     protected int nServers;
     protected ArrayList<Server> servers;
     protected int clients;
-    protected  double skipProb = 0.1;
-
     private double timeLimit;
     private double timeStep;
 
-    public STPN(ArrayList<Server> servers, int clients, double timeLimit, double timeStep) {
+    public STPN(ArrayList<Server> servers, int clients, double timeLimit, double timeStep, double skipProb) {
         this.servers = servers;
         this.nServers = servers.size();
         this.clients = clients;
         this.timeLimit = timeLimit;
         this.timeStep = timeStep;
+        this.skipProb = skipProb;
     }
 
     public HashMap<Double, Double> makeModel() throws IOException {

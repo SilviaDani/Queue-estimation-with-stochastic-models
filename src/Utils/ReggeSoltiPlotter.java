@@ -25,12 +25,12 @@ import java.util.Set;
 
 
 public class ReggeSoltiPlotter extends JFrame {
-    public ReggeSoltiPlotter(String title, HashMap<Double, Double> before, HashMap<Double, Double> after, int eventTime) {
+    public ReggeSoltiPlotter(String title, HashMap<Double, Double> before, HashMap<Double, Double> after, HashMap<Double, Double> groundTruth, int eventTime) {
         super(title);
 
         // Create dataset
-        XYSeriesCollection lineDataset = createLineDataset(before, after, eventTime);
-        XYSeriesCollection areaDataset = createAreaDataset(before, after, eventTime);
+        XYSeriesCollection lineDataset = createLineDataset(before, after, groundTruth, eventTime);
+        XYSeriesCollection areaDataset = createAreaDataset(before, eventTime);
 
         // Create chart
         JFreeChart chart = ChartFactory.createXYLineChart(
@@ -52,18 +52,21 @@ public class ReggeSoltiPlotter extends JFrame {
         lineRenderer.setSeriesPaint(0, new Color(139,0,0)); // f(x)
         lineRenderer.setSeriesPaint(1, new Color(139,0,0)); // g(x)
         lineRenderer.setSeriesPaint(2, new Color(0,0,139)); // h(x)
+        lineRenderer.setSeriesPaint(3, new Color(0,0,0)); //
         plot.setRenderer(0, lineRenderer);
 
         // Disable shapes (dots) for all series
         lineRenderer.setSeriesShapesVisible(0, false);
         lineRenderer.setSeriesShapesVisible(1, false);
         lineRenderer.setSeriesShapesVisible(2, false);
+        lineRenderer.setSeriesShapesVisible(3, false);
 
         // Set line thickness for all series
         float lineWidth = 3.0f; // Set the desired line width
         lineRenderer.setSeriesStroke(0, new BasicStroke(lineWidth));
         lineRenderer.setSeriesStroke(1, new BasicStroke(lineWidth));
         lineRenderer.setSeriesStroke(2, new BasicStroke(lineWidth));
+        lineRenderer.setSeriesStroke(3, new BasicStroke(lineWidth));
 
         // Area renderer for the partial colored area
         XYAreaRenderer areaRenderer = new XYAreaRenderer();
@@ -95,7 +98,7 @@ public class ReggeSoltiPlotter extends JFrame {
         setContentPane(panel);
     }
 
-    private XYSeriesCollection createLineDataset(HashMap<Double, Double> before, HashMap<Double, Double> after, double eventTime) {
+    private XYSeriesCollection createLineDataset(HashMap<Double, Double> before, HashMap<Double, Double> after, HashMap<Double, Double> GT, double eventTime) {
         XYSeriesCollection dataset = new XYSeriesCollection();
         XYSeries series1 = new XYSeries("Before with event");
 
@@ -129,11 +132,22 @@ public class ReggeSoltiPlotter extends JFrame {
         }
         dataset.addSeries(series3);
 
-        Logger.debug("Length of series1: " + series1.getItemCount() + " Length of series2: " + series2.getItemCount() + " Length of series3: " + series3.getItemCount());
+        // Define function to plot theground truth
+        XYSeries seriesGT = new XYSeries("Ground Truth");
+
+        Set<Double> keysGT = GT.keySet();
+        Double[] timesGT = keys.toArray(new Double[0]);
+        Arrays.sort(timesGT);
+        for (int i = 0; i < before.size(); i++){
+            seriesGT.add(new YIntervalDataItem(timesGT[i], GT.get(timesGT[i]), 0, 0), true);
+        }
+        dataset.addSeries(seriesGT);
+
+        Logger.debug("Length of series1: " + series1.getItemCount() + " Length of series2: " + series2.getItemCount() + " Length of series3: " + series3.getItemCount() + " Length of seriesGT: " + seriesGT.getItemCount() );
         return dataset;
     }
 
-    private XYSeriesCollection createAreaDataset(HashMap<Double, Double> before, HashMap<Double, Double> after, double eventTime) {
+    private XYSeriesCollection createAreaDataset(HashMap<Double, Double> before, double eventTime) {
         XYSeriesCollection dataset = new XYSeriesCollection();
         XYSeries series1 = new XYSeries("Before with event");
 
@@ -154,38 +168,3 @@ public class ReggeSoltiPlotter extends JFrame {
         return dataset;
     }
 }
-
-
-/*private YIntervalSeriesCollection createDataset(HashMap<Double, Double> before, HashMap<Double, Double> after, double eventTime) {
-    YIntervalSeriesCollection dataset = new YIntervalSeriesCollection();
-    YIntervalSeries series1 = new YIntervalSeries("Before with event");
-
-    int eventIndex = -1;
-    Set<Double> keys = before.keySet();
-    Double[] timesBefore = keys.toArray(new Double[0]);
-    Arrays.sort(timesBefore);
-    for (int i = 0; i < before.size(); i++){
-        if (timesBefore[i]>eventTime){
-            eventIndex = i;
-            break;
-        }
-        series1.add(new YIntervalDataItem(timesBefore[i], before.get(timesBefore[i]), 0, 0), true);
-    }
-    dataset.addSeries(series1);
-
-    YIntervalSeries series2 = new YIntervalSeries("After without event");
-    for (int i = eventIndex - 1; i < before.size(); i++){
-        series2.add(new YIntervalDataItem(timesBefore[i], before.get(timesBefore[i]), 0, 0), true);
-    }
-    dataset.addSeries(series2);
-
-    YIntervalSeries series3 = new YIntervalSeries("After with event");
-    Set<Double> keys_after = after.keySet();
-    Double[] timesAfter = keys_after.toArray(new Double[0]);
-    Arrays.sort(timesBefore);
-    for (int i = 0; i < after.size(); i++){
-        series3.add(new YIntervalDataItem(timesAfter[i], after.get(timesAfter[i]), 0, 0), true);
-    }
-    dataset.addSeries(series3);
-
-    return dataset;*/
