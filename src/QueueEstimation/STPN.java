@@ -1,6 +1,8 @@
 package QueueEstimation;
 
+import Utils.Logger;
 import Utils.WorkingPrintStreamLogger;
+import org.oristool.analyzer.log.NoOpLogger;
 import org.oristool.models.pn.Priority;
 import org.oristool.models.stpn.MarkingExpr;
 import org.oristool.models.stpn.RewardRate;
@@ -16,6 +18,7 @@ import org.oristool.simulator.stpn.TransitionAbsoluteFiringTime;
 
 import java.io.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 public class STPN<R,S> {
@@ -41,6 +44,14 @@ public class STPN<R,S> {
         //Generating Queue Node
         Place Queue = net.addPlace("Queue");
         marking.setTokens(Queue, clients);
+        Place QueueState = net.addPlace("QueueState"); // This is a state that it is used to simulate the reward "if(Queue==0,1,0)"
+        marking.setTokens(QueueState, 0);
+        Transition lastClientInQueueIsCalled = net.addTransition("LastClientInQueueIsCalled");
+        lastClientInQueueIsCalled.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));
+        lastClientInQueueIsCalled.addFeature(new Priority(0));
+        net.addPrecondition(Queue, lastClientInQueueIsCalled);
+        net.addPostcondition(lastClientInQueueIsCalled, QueueState);
+        StringBuilder lastClientInQueueIsCalledEnablingCondition = new StringBuilder("Queue==1 && ( ");
         for (int s = 0; s < nServers; s++) {
             //Generating the name of the places (only the ones we need after)
             String atServiceName = "AtService" + (s + 1);
@@ -73,7 +84,7 @@ public class STPN<R,S> {
             //marking.setTokens(Served, 0);
             marking.setTokens(Skip, 0);
             //marking.setTokens(Skipped, 0);
-            Call.addFeature(new EnablingFunction(atServiceName+"==0 && "+skipName+"==0"));
+            Call.addFeature(new EnablingFunction(atServiceName+"==0 && "+skipName+"==0 && Queue>1"));
             Call.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));
             Call.addFeature(new Priority(0));
             // Service.addFeature(new EnablingFunction(servedName+"!=0"));
@@ -84,7 +95,17 @@ public class STPN<R,S> {
             ToBeServed.addFeature(new EnablingFunction(atServiceName+"==0"));
             ToBeServed.addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(1-skipProb), net)));
             ToBeServed.addFeature(new Priority(0));
+
+            lastClientInQueueIsCalledEnablingCondition.append("(").append(skipName).append("==0 && ").append(atServiceName).append("==0 )");
+            if (s < nServers - 1) {
+                lastClientInQueueIsCalledEnablingCondition.append(" || ");
+            }
         }
+        lastClientInQueueIsCalledEnablingCondition.append(" )");
+        lastClientInQueueIsCalled.addFeature(new EnablingFunction(lastClientInQueueIsCalledEnablingCondition.toString()));
+
+
+
 
         File f = new File("log.txt");
         if (!f.exists()){
@@ -96,7 +117,7 @@ public class STPN<R,S> {
 
         BigDecimal timeLimit_bigDecimal = new BigDecimal(timeLimit);
         BigDecimal timeStep_bigDecimal = new BigDecimal(timeStep);
-        int timePoints = (timeLimit_bigDecimal.divide(timeStep_bigDecimal)).intValue() + 1;
+        int timePoints = (timeLimit_bigDecimal.divide(timeStep_bigDecimal, RoundingMode.DOWN)).intValue() + 1;
         TransientMarkingConditionProbability r1 =
                 new TransientMarkingConditionProbability(s,
                         new ContinuousRewardTime(timeStep_bigDecimal), timePoints,
@@ -108,15 +129,19 @@ public class STPN<R,S> {
         s.simulate();
 
         // compute the transient solution
-        TransientSolution<Marking, Marking> solution = TreeTransient.builder()
-                .timeBound(new BigDecimal(timeLimit))
-                .timeStep(new BigDecimal(timeStep))
-                .build().compute(net, marking);
-        TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Queue==0,1,0)");
-        HashMap<Double, Double> transientSolution = new HashMap<>();
-        for (int t = 0; t < reward.getSolution().length; t++) {
-            transientSolution.put(t * timeStep, reward.getSolution()[t][0][0]);
-        }
+            Sequencer seq = new Sequencer(net, marking, new STPNSimulatorComponentsFactory(), NoOpLogger.INSTANCE);
+            TransientMarkingConditionProbability rqs = new TransientMarkingConditionProbability(seq,
+                    new ContinuousRewardTime(timeStep_bigDecimal), timePoints,
+                    MarkingCondition.fromString("QueueState"));
+            RewardEvaluator re = new RewardEvaluator(rqs, 10000);
+            seq.simulate();
+            TimeSeriesRewardResult result = (TimeSeriesRewardResult) re.getResult();
+            BigDecimal[] timeSerie = result.getTimeSeries(result.getMarkings().iterator().next());
+            HashMap<Double, Double> transientSolution = new HashMap<>();
+            for (int t = 0; t < timeSerie.length; t++) {
+                transientSolution.put(t * timeStep, timeSerie[t].doubleValue());
+            }
+
         return transientSolution;
     }
 

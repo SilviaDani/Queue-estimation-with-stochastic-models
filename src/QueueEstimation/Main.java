@@ -17,13 +17,13 @@ public class Main {
         int numServers = 1;
         int numClients = 10; // Tagged Customer included!
         double timeLimit = 50.0;
-        double timeStep = 1;
+        double timeStep = 0.01;
 
 
         // Create the servers
         ArrayList<Server> servers = new ArrayList<>();
         for (int i = 0; i < numServers; i++) {
-            servers.add(new ExpServer(0.5));
+            servers.add(new ExpServer(2));
             //servers.add(new UniServer(5, 10));
         }
 
