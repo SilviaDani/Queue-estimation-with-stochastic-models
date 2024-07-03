@@ -11,6 +11,8 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import javax.swing.*;
 
+//TODO shift distributions as time passes
+
 public class Launcher {
 
     public ArrayList<Double> launch(int nServers, int nClients, double realModelSkipProb, boolean to_plot) {
