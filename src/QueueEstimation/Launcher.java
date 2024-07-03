@@ -19,7 +19,7 @@ public class Launcher {
         int numServers = nServers;
         int numClients = nClients; // Tagged Customer included!
         double timeLimit = 50.0;
-        double timeStep = 0.01;
+        double timeStep = 0.1;
 
         Logger.debug("Launching the experiment with " + numServers + " servers and " + numClients + " clients");
 
@@ -91,8 +91,16 @@ public class Launcher {
                         skipProb += 1.0;
                     }
                 }
-                double mean = serviceStats.getMean() / numServers;
-                double variance = (serviceStats.getVariance() + 1e-6) / (numServers * numServers);
+                double mean;
+                double variance;
+                if (serviceStats.getN() == 0) {
+                    Logger.debug("No service events found, skipping...");
+                    mean = 1e-6;
+                    variance = 1e-6 / (numServers * numServers);
+                }else{
+                    mean = (serviceStats.getMean() / numServers) + 1e-6;
+                    variance = (serviceStats.getVariance() + 1e-6) / (numServers * numServers);
+                }
                 double cv = Math.sqrt(variance) / mean;
                 skipProb /= (currentEvent + 1);
                 Logger.debug("Mean: " + mean + "\nVariance: " + variance + "\nCV: " + cv + "\nSkip probability: " + skipProb);

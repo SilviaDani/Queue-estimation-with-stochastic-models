@@ -26,6 +26,7 @@ public class Main {
             for (int c = 0; c < servers.length; c++) {
                 String current_key = "Servers " + s + ", Clients " + c;
                 for (int i = 0; i < REPETITIONS; i++) {
+                    Logger.debug("\nLaunching experiment " + i + " with " + current_key);
                     boolean to_plot = false;
                     if (i == 0)
                         to_plot = true;
