@@ -28,6 +28,8 @@ public class STPN<R,S> {
     private double timeLimit;
     private double timeStep;
 
+    private double skipProb;
+
     public STPN(ArrayList<Server> servers, int clients, double timeLimit, double timeStep, double skipProb) {
         this.servers = servers;
         this.nServers = servers.size();

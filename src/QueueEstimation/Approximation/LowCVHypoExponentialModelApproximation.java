@@ -3,17 +3,20 @@ package QueueEstimation.Approximation;
 import QueueEstimation.Approximation.ModelApproximation;
 import Utils.Logger;
 import Utils.WorkingPrintStreamLogger;
+import org.oristool.analyzer.log.NoOpLogger;
 import org.oristool.models.gspn.GSPNTransient;
 import org.oristool.models.pn.Priority;
 import org.oristool.models.stpn.MarkingExpr;
 import org.oristool.models.stpn.RewardRate;
 import org.oristool.models.stpn.TransientSolution;
 import org.oristool.models.stpn.onegen.OneGenTransient;
+import org.oristool.models.stpn.trans.RegTransient;
 import org.oristool.models.stpn.trans.TreeTransient;
 import org.oristool.models.stpn.trees.DeterministicEnablingState;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
 import org.oristool.petrinet.*;
 import org.oristool.simulator.Sequencer;
+import org.oristool.simulator.TimeSeriesRewardResult;
 import org.oristool.simulator.rewards.ContinuousRewardTime;
 import org.oristool.simulator.rewards.RewardEvaluator;
 import org.oristool.simulator.stpn.STPNSimulatorComponentsFactory;
@@ -24,6 +27,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -63,6 +67,7 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         marking.setTokens(net.getPlace("Intermediate"), 0);
         marking.setTokens(net.getPlace("Start"), 0);
         marking.setTokens(net.getPlace("Queue"), initialTokens);
+        marking.setTokens(net.getPlace("Sink"), 0);
     }
 
     private void updateModel(int nServers) {
@@ -75,8 +80,17 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         net.getTransition("ServiceDET").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal(this.detOffset), MarkingExpr.from("1", net)));
         net.getTransition("ServiceDET").removeFeature(Priority.class);
         net.getTransition("ServiceDET").addFeature(new Priority(0));
+        net.getTransition("ServiceDET").removeFeature(EnablingFunction.class);
+        net.getTransition("ServiceDET").addFeature(new EnablingFunction("Start > 1 && Intermediate == 0"));
         net.getTransition("ServiceEXP").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("ServiceEXP").addFeature(StochasticTransitionFeature.newExponentialInstance(new BigDecimal(this.lambda), MarkingExpr.from("1", net)));
+
+        net.getTransition("LastClientInQueueIsProcessed").removeFeature(StochasticTransitionFeature.class);
+        net.getTransition("LastClientInQueueIsProcessed").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from("1", net)));
+        net.getTransition("LastClientInQueueIsProcessed").removeFeature(Priority.class);
+        net.getTransition("LastClientInQueueIsProcessed").addFeature(new Priority(0));
+        net.getTransition("LastClientInQueueIsProcessed").removeFeature(EnablingFunction.class);
+        net.getTransition("LastClientInQueueIsProcessed").addFeature(new EnablingFunction("Start == 1 && Queue == 0 && Intermediate == 0"));
     }
 
     private void computeParameters(double mean, double variance) {
@@ -90,16 +104,20 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         Place Intermediate = net.addPlace("Intermediate");
         Place Start = net.addPlace("Start");
         Place Queue = net.addPlace("Queue");
+        Place Sink = net.addPlace("Sink");
         Transition Call = net.addTransition("Call");
         Transition Skip = net.addTransition("Skip");
         Transition ServiceDET = net.addTransition("ServiceDET");
         Transition ServiceEXP = net.addTransition("ServiceEXP");
+        Transition LastClientInQueueIsProcessed = net.addTransition("LastClientInQueueIsProcessed");
 
         //Generating Connectors
         net.addPrecondition(Queue, Call);
         net.addPostcondition(Call, Start);
         net.addPrecondition(Queue, Skip);
         net.addPostcondition(Skip, Done);
+        net.addPrecondition(Start, LastClientInQueueIsProcessed);
+        net.addPostcondition(LastClientInQueueIsProcessed, Sink);
 
         net.addPrecondition(Start, ServiceDET);
         net.addPostcondition(ServiceEXP, Done);
@@ -141,35 +159,22 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
     }
 
     @Override
-    public HashMap<Double, Double>  analyzeModel() { // FIXME it's reeeeeaaaaalllllly slow
-        TransientSolution<Marking, Marking> solution = TreeTransient.builder()
-                .timeBound(new BigDecimal(timeLimit))
-                .timeStep(new BigDecimal(timeStep))
-                .build().compute(net, marking);
-
-        TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Start==0,1,0)");
-
-        if (false) { // FIXME remove this
-            double[] thresholds = {0.1, 0.2, 0.3, 0.4, 0.5};
-            int t_index = 0;
-            HashMap<Double, Double> ETAs = new HashMap<>();
-            for (int t = 0; t < reward.getSolution().length; t++) {
-                if (reward.getSolution()[t][0][0] > thresholds[t_index]) {
-                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * timeStep);
-                    ETAs.put(t * timeStep, thresholds[t_index]);
-                    t_index++;
-                    if (t_index == thresholds.length) {
-                        break;
-                    }
-                }
-            }
-            return ETAs;
-        }else{
-            HashMap<Double, Double> transientSolution = new HashMap<>();
-            for (int t = 0; t < reward.getSolution().length; t++) {
-                transientSolution.put(t * timeStep, reward.getSolution()[t][0][0]);
-            }
-            return transientSolution;
+    public HashMap<Double, Double>  analyzeModel() {
+        BigDecimal timeLimit_bigDecimal = new BigDecimal(timeLimit);
+        BigDecimal timeStep_bigDecimal = new BigDecimal(timeStep);
+        int timePoints = (timeLimit_bigDecimal.divide(timeStep_bigDecimal, RoundingMode.DOWN)).intValue() + 1;
+        Sequencer seq = new Sequencer(net, marking, new STPNSimulatorComponentsFactory(), NoOpLogger.INSTANCE);
+        TransientMarkingConditionProbability rqs = new TransientMarkingConditionProbability(seq,
+                new ContinuousRewardTime(timeStep_bigDecimal), timePoints,
+                MarkingCondition.fromString("Sink"));
+        RewardEvaluator re = new RewardEvaluator(rqs, 1000);
+        seq.simulate();
+        TimeSeriesRewardResult result = (TimeSeriesRewardResult) re.getResult();
+        BigDecimal[] timeSerie = result.getTimeSeries(result.getMarkings().iterator().next());
+        HashMap<Double, Double> transientSolution = new HashMap<>();
+        for (int t = 0; t < timeSerie.length; t++) {
+            transientSolution.put(t * timeStep, timeSerie[t].doubleValue());
         }
+        return transientSolution;
     }
 }

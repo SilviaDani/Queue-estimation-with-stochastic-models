@@ -19,7 +19,7 @@ public class Main {
 
     public static void main(String[] args) {
         //Al variare di clients e servers
-        HashMap<String, Double[]> JSDs = new HashMap<String, Double[]>();
+        HashMap<String, ArrayList<Double>> JSDs = new HashMap<String, ArrayList<Double>>();
         Launcher experiment_launcher = new Launcher();
         for (int s = 0; s < servers.length; s++) {
             for (int c = 0; c < servers.length; c++) {
@@ -28,13 +28,14 @@ public class Main {
                     boolean to_plot = false;
                     if (i == 0)
                         to_plot = true;
-                    Double[] currentJSDs = (Double[])experiment_launcher.launch(servers[s], clients[c], skipProbability, to_plot).toArray();
+                    ArrayList<Double> currentJSDs = experiment_launcher.launch(servers[s], clients[c], skipProbability, to_plot);
                     if (!JSDs.containsKey(current_key))
                         JSDs.put(current_key, currentJSDs);
                     else{
-                        Double[] stored_JSDs = JSDs.get(current_key);
-                        for (int l = 0; l < stored_JSDs.length; l++) {
-                            stored_JSDs[l] = stored_JSDs[l] + currentJSDs[l];
+                        ArrayList<Double> stored_JSDs = JSDs.get(current_key);
+                        for (int l = 0; l < stored_JSDs.size(); l++) {
+                            double _stored_JSD_l = stored_JSDs.get(l) + currentJSDs.get(l);
+                            stored_JSDs.set(l, _stored_JSD_l);
                             JSDs.put(current_key, stored_JSDs);
                         }
                     }

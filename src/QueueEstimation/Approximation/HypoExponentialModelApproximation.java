@@ -147,21 +147,6 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
     }
 
     public void computeParameters(double mean, double variance) {
-        /*
-        double cv = Math.sqrt(variance)/mean;
-        this.nErl = 1;
-        if (cv < CV_THRESHOLD){
-            while(this.nErl * (- mean * mean + this.nErl * variance + variance) < 0) {
-                this.nErl++;
-            }
-        }
-        double sqroot = Math.sqrt(this.nErl * (- mean * mean + this.nErl * variance + variance));
-        double denominator = mean * mean - this.nErl * variance;
-        this.lambdaErl = (mean + sqroot) / denominator;
-        this.lambdaExp = (mean - sqroot) / denominator;
-        Logger.debug("nErl: " + this.nErl);
-        Logger.debug("lambdaErl: " + this.lambdaErl);
-        Logger.debug("lambdaExp: " + this.lambdaExp);*/
         double cv = Math.sqrt(variance)/mean;
         this.lambdaErl = (2/mean) / (1 + Math.sqrt(1 + 2 * (cv * cv - 1)));
         this.lambdaExp = (2/mean) / (1 - Math.sqrt(1 + 2 * (cv * cv - 1)));
@@ -177,7 +162,7 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         net.getTransition("Skip").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(this.skip), net)));
 
         net.getTransition("ServiceERL").removeFeature(EnablingFunction.class);
-        net.getTransition("ServiceERL").addFeature(new EnablingFunction("Intermediate < "+ nServers)); // FIXME: check if it's correct
+        net.getTransition("ServiceERL").addFeature(new EnablingFunction("Intermediate < 1")); // FIXME: check if it's correct
         net.getTransition("ServiceERL").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("ServiceERL").addFeature(StochasticTransitionFeature.newExponentialInstance(new BigDecimal(lambdaErl), MarkingExpr.from("1", net)));
         net.getTransition("ServiceEXP").removeFeature(StochasticTransitionFeature.class);

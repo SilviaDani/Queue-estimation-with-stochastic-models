@@ -13,11 +13,13 @@ import javax.swing.*;
 
 public class Launcher {
 
-    public ArrayList<Double> launch(int nServers, int nClients, double skipProb, boolean to_plot) {
+    public ArrayList<Double> launch(int nServers, int nClients, double realModelSkipProb, boolean to_plot) {
         int numServers = nServers;
         int numClients = nClients; // Tagged Customer included!
         double timeLimit = 50.0;
         double timeStep = 0.01;
+
+        Logger.debug("Launching the experiment with " + numServers + " servers and " + numClients + " clients");
 
         // Create the servers
         ArrayList<Server> servers = new ArrayList<>();
@@ -27,7 +29,7 @@ public class Launcher {
         }
 
         // Create the STPN model
-        STPN stpn = new STPN(servers, numClients,timeLimit, timeStep, skipProb);
+        STPN stpn = new STPN(servers, numClients,timeLimit, timeStep, realModelSkipProb);
         ApproxParser approxParser = new ApproxParser();
         HashMap<Double, Double> trueTransient = null;
         try {
@@ -105,13 +107,13 @@ public class Launcher {
                     modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, queueSize, numServers, skipProb, timeLimit, timeStep));
                 }
                 HashMap<Double, Double> approxTransient = modelApproximator.analyzeModel();
-                if (currentEvent >= 2){ //perchè l'aggiornamento parte dopo aver contato 2 eventi TODO se so cambia l'if esterno cambiare anche questo
+                if (currentEvent >= 2 && to_plot){ //perchè l'aggiornamento parte dopo aver contato 2 eventi TODO se so cambia l'if esterno cambiare anche questo
                     // Plot like Rogge-Solti
                     String title = "before vs after " + currentEvent;
                     ReggeSoltiPlotter reggeSoltiPlotter = new ReggeSoltiPlotter(title, approxTransientBefore, approxTransient, trueTransient, currentEvent);
                     reggeSoltiPlotter.setSize(800, 800);
                     reggeSoltiPlotter.setLocationRelativeTo(null);
-                    reggeSoltiPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    //reggeSoltiPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                     reggeSoltiPlotter.setVisible(true);
                 }
                 approxTransientBefore = approxTransient;

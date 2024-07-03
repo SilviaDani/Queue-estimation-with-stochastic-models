@@ -132,14 +132,15 @@ public class ReggeSoltiPlotter extends JFrame {
         }
         dataset.addSeries(series3);
 
-        // Define function to plot theground truth
+        // Define function to plot the ground truth
         XYSeries seriesGT = new XYSeries("Ground Truth");
 
         Set<Double> keysGT = GT.keySet();
-        Double[] timesGT = keys.toArray(new Double[0]);
+        Double[] timesGT = keysGT.toArray(new Double[0]);
         Arrays.sort(timesGT);
-        for (int i = 0; i < before.size(); i++){
-            seriesGT.add(new YIntervalDataItem(timesGT[i], GT.get(timesGT[i]), 0, 0), true);
+        for (int i = 0; i < GT.size(); i++){
+            seriesGT.add(timesGT[i], GT.get(timesGT[i]));
+           // ! seriesGT.add(new YIntervalDataItem(timesGT[i], GT.get(timesGT[i]), 0, 0), true);
         }
         dataset.addSeries(seriesGT);
 
