@@ -4,6 +4,7 @@ import org.apache.commons.math3.analysis.function.Log;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
@@ -25,18 +26,22 @@ import java.util.Set;
 
 
 public class ReggeSoltiPlotter extends JFrame {
-    public ReggeSoltiPlotter(String title, HashMap<Double, Double> before, HashMap<Double, Double> after, HashMap<Double, Double> groundTruth, int eventTime) {
+    double timeStep;
+    boolean isCDF = false;
+    public ReggeSoltiPlotter(String title, HashMap<Integer, Double> before, HashMap<Integer, Double> after, HashMap<Integer, Double> groundTruth, double eventTime, double timeStep, String xAxisLabel, String yAxisLabel, double timeLimit) {
         super(title);
-
+        this.timeStep = timeStep;
         // Create dataset
         XYSeriesCollection lineDataset = createLineDataset(before, after, groundTruth, eventTime);
         XYSeriesCollection areaDataset = createAreaDataset(before, eventTime);
+        if (yAxisLabel.equals("CDF"))
+            isCDF = true;
 
         // Create chart
         JFreeChart chart = ChartFactory.createXYLineChart(
                 title,
-                "Time",
-                "CDF",
+                xAxisLabel,
+                yAxisLabel,
                 lineDataset,
                 PlotOrientation.VERTICAL,
                 false,
@@ -44,8 +49,11 @@ public class ReggeSoltiPlotter extends JFrame {
                 false
         );
 
+        NumberAxis xAxis = new NumberAxis();
+        xAxis.setRange(0.0, timeLimit + 10.0);
         // Customize the plot
         XYPlot plot = chart.getXYPlot();
+        plot.setDomainAxis(xAxis);
 
         // Line renderer for the full curves
         XYLineAndShapeRenderer lineRenderer = new XYLineAndShapeRenderer();
@@ -64,7 +72,12 @@ public class ReggeSoltiPlotter extends JFrame {
         // Set line thickness for all series
         float lineWidth = 3.0f; // Set the desired line width
         lineRenderer.setSeriesStroke(0, new BasicStroke(lineWidth));
-        lineRenderer.setSeriesStroke(1, new BasicStroke(lineWidth));
+        if (isCDF)
+            lineRenderer.setSeriesStroke(1, new BasicStroke(lineWidth));
+        else{
+            float[] dash = {10.0f, 10.0f};
+            lineRenderer.setSeriesStroke(1, new BasicStroke(2.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, dash, 0.0f));
+        }
         lineRenderer.setSeriesStroke(2, new BasicStroke(lineWidth));
         lineRenderer.setSeriesStroke(3, new BasicStroke(lineWidth));
 
@@ -98,48 +111,52 @@ public class ReggeSoltiPlotter extends JFrame {
         setContentPane(panel);
     }
 
-    private XYSeriesCollection createLineDataset(HashMap<Double, Double> before, HashMap<Double, Double> after, HashMap<Double, Double> GT, double eventTime) {
+
+    private XYSeriesCollection createLineDataset(HashMap<Integer, Double> before, HashMap<Integer, Double> after, HashMap<Integer, Double> GT, double eventTime) {
         XYSeriesCollection dataset = new XYSeriesCollection();
-        XYSeries series1 = new XYSeries("Before with event");
+        XYSeries series1 = new XYSeries("Before without event");
 
         // Define the first function and add data points
-        int eventIndex = -1;
-        Set<Double> keys = before.keySet();
-        Double[] timesBefore = keys.toArray(new Double[0]);
+        int eventIndex = 0;
+        Set<Integer> keys = before.keySet();
+        Integer[] timesBefore = keys.toArray(new Integer[0]);
         Arrays.sort(timesBefore);
         for (int i = 0; i < before.size(); i++){
-            if (timesBefore[i]>eventTime){
-                eventIndex = i;
+            Logger.debug("Time: " + timesBefore[i] + " Value: " + before.get(timesBefore[i]) + " Event Time: " + eventTime);
+            if (timesBefore[i]>((int) (eventTime / timeStep))){
                 break;
             }
-            series1.add(timesBefore[i], before.get(timesBefore[i]));
+            else {
+                series1.add(timesBefore[i] * timeStep, before.get(timesBefore[i]));
+                eventIndex = i;
+            }
         }
         dataset.addSeries(series1);
 
         XYSeries series2 = new XYSeries("After without event");
-        for (int i = eventIndex - 1; i < before.size(); i++){
-            series2.add(timesBefore[i], before.get(timesBefore[i]));
+        for (int i = eventIndex; i < before.size(); i++){
+            series2.add(timesBefore[i] * timeStep, before.get(timesBefore[i]));
         }
         dataset.addSeries(series2);
 
         // Define the third function and add data points
         XYSeries series3 = new XYSeries("After with event");
-        Set<Double> keys_after = after.keySet();
-        Double[] timesAfter = keys_after.toArray(new Double[0]);
+        Set<Integer> keys_after = after.keySet();
+        Integer[] timesAfter = keys_after.toArray(new Integer[0]);
         Arrays.sort(timesAfter);
-        for (int i = eventIndex - 1; i < after.size(); i++) {
-            series3.add(timesAfter[i], after.get(timesAfter[i]));
+        for (int i = 0; i < after.size(); i++) {
+            series3.add(timesAfter[i] * timeStep, after.get(timesAfter[i]));
         }
         dataset.addSeries(series3);
 
         // Define function to plot the ground truth
         XYSeries seriesGT = new XYSeries("Ground Truth");
 
-        Set<Double> keysGT = GT.keySet();
-        Double[] timesGT = keysGT.toArray(new Double[0]);
+        Set<Integer> keysGT = GT.keySet();
+        Integer[] timesGT = keysGT.toArray(new Integer[0]);
         Arrays.sort(timesGT);
         for (int i = 0; i < GT.size(); i++){
-            seriesGT.add(timesGT[i], GT.get(timesGT[i]));
+            seriesGT.add(timesGT[i] * timeStep, GT.get(timesGT[i]));
            // ! seriesGT.add(new YIntervalDataItem(timesGT[i], GT.get(timesGT[i]), 0, 0), true);
         }
         dataset.addSeries(seriesGT);
@@ -147,22 +164,20 @@ public class ReggeSoltiPlotter extends JFrame {
         Logger.debug("Length of series1: " + series1.getItemCount() + " Length of series2: " + series2.getItemCount() + " Length of series3: " + series3.getItemCount() + " Length of seriesGT: " + seriesGT.getItemCount() );
         return dataset;
     }
-
-    private XYSeriesCollection createAreaDataset(HashMap<Double, Double> before, double eventTime) {
+    private XYSeriesCollection createAreaDataset(HashMap<Integer, Double> before, double eventTime) {
         XYSeriesCollection dataset = new XYSeriesCollection();
         XYSeries series1 = new XYSeries("Before with event");
 
         // Define the partial area for the first function
-        int eventIndex = -1;
-        Set<Double> keys = before.keySet();
-        Double[] timesBefore = keys.toArray(new Double[0]);
+        Set<Integer> keys = before.keySet();
+        Integer[] timesBefore = keys.toArray(new Integer[0]);
         Arrays.sort(timesBefore);
         for (int i = 0; i < before.size(); i++){
-            if (timesBefore[i]>eventTime){
-                eventIndex = i;
+            if (timesBefore[i]>((int) (eventTime / timeStep))){
                 break;
             }
-            series1.add(timesBefore[i], before.get(timesBefore[i]));
+            else
+                series1.add(timesBefore[i] * timeStep, before.get(timesBefore[i]));
         }
         dataset.addSeries(series1);
 

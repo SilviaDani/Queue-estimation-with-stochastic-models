@@ -17,7 +17,7 @@ public class ModelApproximator {
         return modelApproximation.getModelType();
     }
 
-    public HashMap<Double, Double> analyzeModel(){
+    public HashMap<Integer, Double> analyzeModel(){
         return modelApproximation.analyzeModel();
     }
 }

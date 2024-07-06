@@ -10,6 +10,6 @@ public interface ModelApproximation {
 
     String getModelType();
 
-    HashMap<Double, Double> analyzeModel();
+    HashMap<Integer, Double> analyzeModel();
 
 }

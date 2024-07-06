@@ -37,8 +37,9 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
 
     private double timeLimit;
     private double timeStep;
+    private double offset = 0.0;
 
-    public  HypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers, double timeLimit, double timeStep){
+    public  HypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers, double timeLimit, double timeStep, double offset){
         if (net == null){
             net = new PetriNet();
             net = createNet();
@@ -51,11 +52,12 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         setInitialMarking(initialTokens);
         this.timeLimit = timeLimit;
         this.timeStep = timeStep;
+        this.offset = offset;
 
     }
 
-    public HypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers, double skip, double timeLimit, double timeStep){
-        this(mean, variance, initialTokens, nServers, timeLimit, timeStep);
+    public HypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers, double skip, double timeLimit, double timeStep, double offset){
+        this(mean, variance, initialTokens, nServers, timeLimit, timeStep, offset);
         this.skip = skip;
     }
     @Override
@@ -89,36 +91,21 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
     }
 
     @Override
-    public HashMap<Double, Double> analyzeModel(){ //Since this model is only made of IMM and EXP transitions, it is a GSPN
+    public HashMap<Integer, Double> analyzeModel(){ //Since this model is only made of IMM and EXP transitions, it is a GSPN
         Pair<Map<Marking, Integer>, double[][]> result = GSPNTransient.builder()
-                .timePoints(0.0, timeLimit, timeStep)
+                .timePoints(0.0, timeLimit - offset, timeStep)
                 .build().compute(net, marking); // FIXME check if 100.0 as end time is enough (or it is too much)
 
         TransientSolution<Marking, Marking> solution = TransientSolution.fromArray(result.second(), timeStep, result.first(), marking);
 
         TransientSolution<Marking, RewardRate> reward = TransientSolution.computeRewards(false, solution, "If(Start==0,1,0)");
-        if (false) {// FIXME remove this
-            double[] thresholds = {0.1, 0.2, 0.3, 0.4, 0.5};
-            int t_index = 0;
-            HashMap<Double, Double> ETAs = new HashMap<>();
-            for (int t = 0; t < reward.getSolution().length; t++) {
-                if (reward.getSolution()[t][0][0] > thresholds[t_index]) {
-                    Logger.debug("Time to reach " + thresholds[t_index] + ": " + t * timeStep);
-                    ETAs.put(t * timeStep, thresholds[t_index]);
-                    t_index++;
-                    if (t_index == thresholds.length) {
-                        break;
-                    }
-                }
-            }
-            return ETAs;
-        }else{
-            HashMap<Double, Double> transientSolution = new HashMap<>();
-            for (int t = 0; t < reward.getSolution().length; t++) {
-                transientSolution.put(t * timeStep, reward.getSolution()[t][0][0]);
-            }
-            return transientSolution;
+
+        HashMap<Integer, Double> transientSolution = new HashMap<>();
+        for (int t = 0; t < reward.getSolution().length; t++) {
+            transientSolution.put((t + (int)(offset / timeStep)), reward.getSolution()[t][0][0]);
         }
+        return transientSolution;
+
     }
 
     private PetriNet createNet(){

@@ -42,7 +42,8 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
 
     private double timeLimit;
     private double timeStep;
-    public LowCVHypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers, double timeLimit, double timeStep){
+    private double offset = 0.0;
+    public LowCVHypoExponentialModelApproximation(double mean, double variance, int initialTokens, int nServers, double timeLimit, double timeStep, double offset){
         if (net == null){
             net = new PetriNet();
             net = createNet();
@@ -55,10 +56,11 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         setInitialMarking(initialTokens);
         this.timeLimit = timeLimit;
         this.timeStep = timeStep;
+        this.offset = offset;
     }
 
-    public LowCVHypoExponentialModelApproximation (double mean, double variance, int initialTokens, int nServers, double skip, double timeLimit, double timeStep){
-        this(mean, variance, initialTokens, nServers, timeLimit, timeStep);
+    public LowCVHypoExponentialModelApproximation (double mean, double variance, int initialTokens, int nServers, double skip, double timeLimit, double timeStep, double offset){
+        this(mean, variance, initialTokens, nServers, timeLimit, timeStep, offset);
         this.skip = skip;
     }
 
@@ -159,8 +161,8 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
     }
 
     @Override
-    public HashMap<Double, Double>  analyzeModel() {
-        BigDecimal timeLimit_bigDecimal = new BigDecimal(timeLimit);
+    public HashMap<Integer, Double>  analyzeModel() {
+        BigDecimal timeLimit_bigDecimal = new BigDecimal(timeLimit - offset);
         BigDecimal timeStep_bigDecimal = new BigDecimal(timeStep);
         int timePoints = (timeLimit_bigDecimal.divide(timeStep_bigDecimal, RoundingMode.DOWN)).intValue() + 1;
         Sequencer seq = new Sequencer(net, marking, new STPNSimulatorComponentsFactory(), NoOpLogger.INSTANCE);
@@ -171,9 +173,9 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         seq.simulate();
         TimeSeriesRewardResult result = (TimeSeriesRewardResult) re.getResult();
         BigDecimal[] timeSerie = result.getTimeSeries(result.getMarkings().iterator().next());
-        HashMap<Double, Double> transientSolution = new HashMap<>();
+        HashMap<Integer, Double> transientSolution = new HashMap<>();
         for (int t = 0; t < timeSerie.length; t++) {
-            transientSolution.put(t * timeStep, timeSerie[t].doubleValue());
+            transientSolution.put(t + (int)(offset / timeStep), timeSerie[t].doubleValue());
         }
         return transientSolution;
     }

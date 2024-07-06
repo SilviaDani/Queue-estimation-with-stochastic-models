@@ -39,7 +39,7 @@ public class STPN<R,S> {
         this.skipProb = skipProb;
     }
 
-    public HashMap<Double, Double> makeModel() throws IOException {
+    public HashMap<Integer, Double> makeModel() throws IOException {
         PetriNet net = new PetriNet();
         Marking marking = new Marking();
         //Generating Queue Node
@@ -138,9 +138,9 @@ public class STPN<R,S> {
             seq.simulate();
             TimeSeriesRewardResult result = (TimeSeriesRewardResult) re.getResult();
             BigDecimal[] timeSerie = result.getTimeSeries(result.getMarkings().iterator().next());
-            HashMap<Double, Double> transientSolution = new HashMap<>();
+            HashMap<Integer, Double> transientSolution = new HashMap<>();
             for (int t = 0; t < timeSerie.length; t++) {
-                transientSolution.put(t * timeStep, timeSerie[t].doubleValue());
+                transientSolution.put(t, timeSerie[t].doubleValue());
             }
 
         return transientSolution;

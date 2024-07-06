@@ -20,36 +20,44 @@ public class Main {
 
     public static void main(String[] args) {
         //Al variare di clients e servers
-        HashMap<String, ArrayList<Double>> JSDs = new HashMap<String, ArrayList<Double>>();
-        Launcher experiment_launcher = new Launcher();
-        for (int s = 0; s < servers.length; s++) {
-            for (int c = 0; c < servers.length; c++) {
-                String current_key = "Servers " + s + ", Clients " + c;
-                for (int i = 0; i < REPETITIONS; i++) {
-                    Logger.debug("\nLaunching experiment " + i + " with " + current_key);
-                    boolean to_plot = false;
-                    if (i == 0)
-                        to_plot = true;
-                    ArrayList<Double> currentJSDs = experiment_launcher.launch(servers[s], clients[c], skipProbability, to_plot);
-                    if (!JSDs.containsKey(current_key))
-                        JSDs.put(current_key, currentJSDs);
-                    else{
-                        ArrayList<Double> stored_JSDs = JSDs.get(current_key);
-                        for (int l = 0; l < stored_JSDs.size(); l++) {
-                            double _stored_JSD_l = stored_JSDs.get(l) + currentJSDs.get(l);
-                            stored_JSDs.set(l, _stored_JSD_l);
-                            JSDs.put(current_key, stored_JSDs);
+        if (false) {
+            HashMap<String, ArrayList<Double>> JSDs = new HashMap<String, ArrayList<Double>>();
+            Launcher experiment_launcher = new Launcher();
+            for (int s = 0; s < servers.length; s++) {
+                for (int c = 0; c < servers.length; c++) {
+                    String current_key = "Servers " + servers[s] + ", Clients " + clients[c];
+                    for (int i = 0; i < REPETITIONS; i++) {
+                        Logger.debug("\nLaunching experiment " + i + " with " + current_key);
+                        boolean to_plot = false;
+                        if (i == 0)
+                            to_plot = true;
+                        ArrayList<Double> currentJSDs = experiment_launcher.launch(servers[s], clients[c], skipProbability, to_plot);
+                        if (!JSDs.containsKey(current_key))
+                            JSDs.put(current_key, currentJSDs);
+                        else {
+                            ArrayList<Double> stored_JSDs = JSDs.get(current_key);
+                            for (int l = 0; l < stored_JSDs.size(); l++) {
+                                double _stored_JSD_l = stored_JSDs.get(l) + currentJSDs.get(l);
+                                stored_JSDs.set(l, _stored_JSD_l);
+                                JSDs.put(current_key, stored_JSDs);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        //Al variare dello skip
-        HashMap<Integer, Double[]> JSDs_skip = new HashMap<Integer, Double[]>();
-        for (int skip = 0; skip < skips.length; skip++){
-            Double[] currentJSDs = (Double[])experiment_launcher.launch(server, client, skip, true).toArray();
-            JSDs_skip.put(skip, currentJSDs);
+            //Al variare dello skip
+            HashMap<Integer, ArrayList<Double>> JSDs_skip = new HashMap<Integer, ArrayList<Double>>();
+            for (int skip = 0; skip < skips.length; skip++) {
+                ArrayList<Double> currentJSDs = experiment_launcher.launch(server, client, skip, true);
+                JSDs_skip.put(skip, currentJSDs);
+            }
         }
+        // Differenza tra X1(t|t>t2) e X2(t)
+        HashMap<String, ArrayList<Double>> JSDs_diff = new HashMap<String, ArrayList<Double>>();
+        Launcher experiment_launcher = new Launcher();
+        experiment_launcher.launch_second_experiment(1, 32, 0.1, true, 50.0);
+
+
     }
 }
