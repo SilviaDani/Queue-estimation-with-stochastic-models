@@ -149,7 +149,7 @@ public class HypoExponentialModelApproximation implements ModelApproximation{
         net.getTransition("Skip").addFeature(StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(this.skip), net)));
 
         net.getTransition("ServiceERL").removeFeature(EnablingFunction.class);
-        net.getTransition("ServiceERL").addFeature(new EnablingFunction("Intermediate < 1")); // FIXME: check if it's correct
+        net.getTransition("ServiceERL").addFeature(new EnablingFunction("Intermediate < " + nServers) ); // FIXME: check if it's correct
         net.getTransition("ServiceERL").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("ServiceERL").addFeature(StochasticTransitionFeature.newExponentialInstance(new BigDecimal(lambdaErl), MarkingExpr.from("1", net)));
         net.getTransition("ServiceEXP").removeFeature(StochasticTransitionFeature.class);

@@ -83,7 +83,7 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         net.getTransition("ServiceDET").removeFeature(Priority.class);
         net.getTransition("ServiceDET").addFeature(new Priority(0));
         net.getTransition("ServiceDET").removeFeature(EnablingFunction.class);
-        net.getTransition("ServiceDET").addFeature(new EnablingFunction("Start > 1 && Intermediate == 0"));
+        net.getTransition("ServiceDET").addFeature(new EnablingFunction("Start > 1 && Intermediate == 0")); //TODO check this im not sure it is correct. Forse servono nServers DET che conflusiscono in Intermediate
         net.getTransition("ServiceEXP").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("ServiceEXP").addFeature(StochasticTransitionFeature.newExponentialInstance(new BigDecimal(this.lambda), MarkingExpr.from("1", net)));
 
@@ -169,7 +169,7 @@ public class LowCVHypoExponentialModelApproximation implements ModelApproximatio
         TransientMarkingConditionProbability rqs = new TransientMarkingConditionProbability(seq,
                 new ContinuousRewardTime(timeStep_bigDecimal), timePoints,
                 MarkingCondition.fromString("Sink"));
-        RewardEvaluator re = new RewardEvaluator(rqs, 1000);
+        RewardEvaluator re = new RewardEvaluator(rqs, 10000);
         seq.simulate();
         TimeSeriesRewardResult result = (TimeSeriesRewardResult) re.getResult();
         BigDecimal[] timeSerie = result.getTimeSeries(result.getMarkings().iterator().next());

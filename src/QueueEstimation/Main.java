@@ -20,7 +20,7 @@ public class Main {
 
     public static void main(String[] args) {
         //Al variare di clients e servers
-        if (false) {
+        if (true) {
             HashMap<String, ArrayList<Double>> JSDs = new HashMap<String, ArrayList<Double>>();
             Launcher experiment_launcher = new Launcher();
             for (int s = 0; s < servers.length; s++) {
@@ -53,11 +53,11 @@ public class Main {
                 JSDs_skip.put(skip, currentJSDs);
             }
         }
-        // Differenza tra X1(t|t>t2) e X2(t)
-        HashMap<String, ArrayList<Double>> JSDs_diff = new HashMap<String, ArrayList<Double>>();
-        Launcher experiment_launcher = new Launcher();
-        experiment_launcher.launch_second_experiment(1, 32, 0.1, true, 50.0);
-
-
+        if (false){
+            // Differenza tra X1(t|t>t2) e X2(t)
+            HashMap<String, ArrayList<Double>> JSDs_diff = new HashMap<String, ArrayList<Double>>();
+            Launcher experiment_launcher = new Launcher();
+            experiment_launcher.launch_second_experiment(1, 32, 0.1, true, 50.0);
+        }
     }
 }

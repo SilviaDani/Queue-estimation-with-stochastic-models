@@ -73,7 +73,6 @@ public class Launcher {
             Logger.debug("Event " + currentEvent + " of " + (filteredEvents.size() - 1));
             // Get current event
             Event curEvent = filteredEvents.get(currentEvent);
-            Logger.debug("/n/n" + String.valueOf(curEvent.eventTime));
             double scale = Math.pow(10, 1); //TODO cambiare in base allo step SEMPRE potenza del 10
             double offset = (double) Math.round(curEvent.eventTime * scale) / scale;
             obsTimes.add(curEvent.eventTime);
@@ -121,12 +120,12 @@ public class Launcher {
                 HashMap<Integer, Double> approxTransient = modelApproximator.analyzeModel();
                 if (currentEvent >= 2 && to_plot){ //perchè l'aggiornamento parte dopo aver contato 2 eventi TODO se so cambia l'if esterno cambiare anche questo
                     // Plot like Rogge-Solti
-                    String title = "before vs after event" + currentEvent;
-                    ReggeSoltiPlotter reggeSoltiPlotter = new ReggeSoltiPlotter(title, approxTransientBefore, approxTransient, trueTransient, offset, timeStep, "Time", " CDF", timeLimit);
-                    reggeSoltiPlotter.setSize(800, 800);
-                    reggeSoltiPlotter.setLocationRelativeTo(null);
-                    //reggeSoltiPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                    reggeSoltiPlotter.setVisible(true);
+                    String title = "CDF before vs after event" + currentEvent;
+                    ReggeSoltiPlotter CDFReggeSoltiPlotter = new ReggeSoltiPlotter(title, approxTransientBefore, approxTransient, trueTransient, offset, timeStep, "Time", " CDF", timeLimit);
+                    CDFReggeSoltiPlotter.setSize(800, 800);
+                    CDFReggeSoltiPlotter.setLocationRelativeTo(null);
+                    //PDFReggeSoltiPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    CDFReggeSoltiPlotter.setVisible(true);
                 }
                 approxTransientBefore = approxTransient;
                 // Measure the distance between the real distribution and the approximated
@@ -254,16 +253,17 @@ public class Launcher {
                     HashMap<Integer, Double> unconditionedPDF = ConverterCDFToPDF.convertCDFToPDF(approxTransientBefore);
                     HashMap<Integer, Double> conditionedPDF = ConditionedPDF.computeConditionedPDF(approxTransientBefore, (int) (offset / timeStep));
                     HashMap<Integer, Double> newPDF = ConverterCDFToPDF.convertCDFToPDF(approxTransient);
+                    HashMap<Integer, Double> groundTruthPDF = ConverterCDFToPDF.convertCDFToPDF(trueTransient);
                     double jsd = JensenShannonDivergence.computeJensenShannonDivergence(conditionedPDF, newPDF);
                     JSDs.add(jsd);
                     if (currentEvent >= 2 && to_plot) { //perchè l'aggiornamento parte dopo aver contato 2 eventi TODO se so cambia l'if esterno cambiare anche questo
                         // Plot like Rogge-Solti
-                        String title = "X(t | t > t_" + currentEvent + ") vs X(t)";
-                        ReggeSoltiPlotter reggeSoltiPlotter = new ReggeSoltiPlotter(title, unconditionedPDF, conditionedPDF, newPDF , offset, timeStep, "Time", " PDF", timeLimit);
-                        reggeSoltiPlotter.setSize(800, 800);
-                        reggeSoltiPlotter.setLocationRelativeTo(null);
+                        String title = "PDF X(t | t > t_" + currentEvent + ") vs X(t)";
+                        ReggeSoltiPlotter PDFReggeSoltiPlotter = new ReggeSoltiPlotter(title, unconditionedPDF, conditionedPDF, newPDF , groundTruthPDF, offset, timeStep, "Time", " PDF", timeLimit);
+                        PDFReggeSoltiPlotter.setSize(800, 800);
+                        PDFReggeSoltiPlotter.setLocationRelativeTo(null);
                         //reggeSoltiPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                        reggeSoltiPlotter.setVisible(true);
+                        PDFReggeSoltiPlotter.setVisible(true);
                     }
                 }
                 approxTransientBefore = approxTransient;

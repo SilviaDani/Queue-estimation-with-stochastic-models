@@ -164,7 +164,7 @@ public class HyperExponentialModelApproximation implements ModelApproximation{
         net.getTransition("Service1").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("Service1").addFeature(StochasticTransitionFeature.newExponentialInstance(new BigDecimal(lambda1), MarkingExpr.from("1", net)));
         net.getTransition("Switch1_P").removeFeature(EnablingFunction.class);
-        net.getTransition("Switch1_P").addFeature(new EnablingFunction("Intermediate1 < 1"));
+        net.getTransition("Switch1_P").addFeature(new EnablingFunction("Intermediate1 < " + nServers));
         net.getTransition("Switch1_P").removeFeature(StochasticTransitionFeature.class);
         net.getTransition("Switch1_P").addFeature( StochasticTransitionFeature.newDeterministicInstance(new BigDecimal("0"), MarkingExpr.from(String.valueOf(1.0-this.p), net)));
         net.getTransition("SwitchP").removeFeature(EnablingFunction.class);
