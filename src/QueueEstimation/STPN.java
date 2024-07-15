@@ -70,7 +70,7 @@ public class STPN<R,S> {
             Transition ToBeServed = net.addTransition("ToBeServed" + (s + 1));
 
             //Generating Connectors
-            net.addInhibitorArc(AtService, Call);
+            //net.addInhibitorArc(AtService, Call);
             net.addPrecondition(Skip, SkipTransition);
             net.addPrecondition(AtService, Service);
             net.addPostcondition(ToBeServed, AtService);
@@ -137,10 +137,17 @@ public class STPN<R,S> {
             RewardEvaluator re = new RewardEvaluator(rqs, 10000);
             seq.simulate();
             TimeSeriesRewardResult result = (TimeSeriesRewardResult) re.getResult();
-            BigDecimal[] timeSerie = result.getTimeSeries(result.getMarkings().iterator().next());
+            BigDecimal[] timeSeries = new BigDecimal[timePoints];
+            for (Marking marking1 : result.getMarkings()) {
+                BigDecimal[] timeSerie = result.getTimeSeries(marking1);
+                for (int t = 0; t < timeSerie.length; t++) {
+                    timeSeries[t] = timeSeries[t] == null ? timeSerie[t] : timeSeries[t].add(timeSerie[t]);
+                }
+            }
+            // BigDecimal[] timeSerie = result.getTimeSeries(result.getMarkings().iterator().next());
             HashMap<Integer, Double> transientSolution = new HashMap<>();
-            for (int t = 0; t < timeSerie.length; t++) {
-                transientSolution.put(t, timeSerie[t].doubleValue());
+            for (int t = 0; t < timeSeries.length; t++) {
+                transientSolution.put(t, timeSeries[t].doubleValue());
             }
 
         return transientSolution;

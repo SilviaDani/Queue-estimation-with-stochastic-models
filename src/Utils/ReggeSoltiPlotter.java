@@ -3,6 +3,7 @@ package Utils;
 import org.apache.commons.math3.analysis.function.Log;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
+import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.PlotOrientation;
@@ -17,8 +18,11 @@ import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.xy.*;
 
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,7 +31,7 @@ import java.util.Set;
 
 public class ReggeSoltiPlotter extends JFrame {
     double timeStep;
-    public ReggeSoltiPlotter(String title, HashMap<Integer, Double> before, HashMap<Integer, Double> after, HashMap<Integer, Double> groundTruth, double eventTime, double timeStep, String xAxisLabel, String yAxisLabel, double timeLimit) {
+    public ReggeSoltiPlotter(String title, HashMap<Integer, Double> before, HashMap<Integer, Double> after, HashMap<Integer, Double> groundTruth, double eventTime, double timeStep, String xAxisLabel, String yAxisLabel, double timeLimit, String filename) {
         super(title);
         this.timeStep = timeStep;
 
@@ -102,6 +106,13 @@ public class ReggeSoltiPlotter extends JFrame {
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(new Dimension(800, 600));
         setContentPane(panel);
+
+        // Save
+        try{
+        ChartUtilities.saveChartAsPNG(new File(filename), chart, 800, 800);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
 
@@ -121,7 +132,7 @@ public class ReggeSoltiPlotter extends JFrame {
             }
             else {
                 series1.add(timesBefore[i] * timeStep, before.get(timesBefore[i]));
-                eventIndex = i;
+                // eventIndex = i;
             }
         }
         dataset.addSeries(series1);
@@ -159,7 +170,7 @@ public class ReggeSoltiPlotter extends JFrame {
     }
 
 
-    public ReggeSoltiPlotter(String title, HashMap<Integer, Double> before, HashMap<Integer, Double> conditioned, HashMap<Integer, Double> after, HashMap<Integer, Double> groundTruth, double eventTime, double timeStep, String xAxisLabel, String yAxisLabel, double timeLimit) {
+    public ReggeSoltiPlotter(String title, HashMap<Integer, Double> before, HashMap<Integer, Double> conditioned, HashMap<Integer, Double> after, HashMap<Integer, Double> groundTruth, double eventTime, double timeStep, String xAxisLabel, String yAxisLabel, double timeLimit, String filename) {
         super(title);
         this.timeStep = timeStep;
         //PER PDF
@@ -236,6 +247,13 @@ public class ReggeSoltiPlotter extends JFrame {
         ChartPanel panel = new ChartPanel(chart);
         panel.setPreferredSize(new Dimension(800, 600));
         setContentPane(panel);
+
+        // Save
+        try{
+            ChartUtilities.saveChartAsPNG(new File(filename), chart, 800, 800);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     private XYSeriesCollection createLineDataset(HashMap<Integer, Double> before, HashMap<Integer, Double> conditioned, HashMap<Integer, Double> after, HashMap<Integer, Double> GT, double eventTime) {

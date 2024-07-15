@@ -4,12 +4,14 @@ import Utils.Logger;
 import java.util.HashMap;
 import java.util.ArrayList;
 
+import static Utils.JSONWriter.writeData;
+
 
 public class Main {
-    final static int REPETITIONS = 100;
+    final static int REPETITIONS = 25;
 
     //Parametri al variare del numero dei server e i client
-    final static int[] servers = {1, 2, 4, 8};
+    final static int[] servers = {1, 2, 4, 6};
     final static int[] clients = {8, 16, 32, 64};
     final static double skipProbability = 0.1;
 
@@ -24,7 +26,10 @@ public class Main {
             HashMap<String, ArrayList<Double>> JSDs = new HashMap<String, ArrayList<Double>>();
             Launcher experiment_launcher = new Launcher();
             for (int s = 0; s < servers.length; s++) {
-                for (int c = 0; c < servers.length; c++) {
+                for (int c = 0; c < clients.length; c++) {
+                    if (servers[s] == 1){
+                        continue;
+                    }
                     String current_key = "Servers " + servers[s] + ", Clients " + clients[c];
                     for (int i = 0; i < REPETITIONS; i++) {
                         Logger.debug("\nLaunching experiment " + i + " with " + current_key);
@@ -32,6 +37,8 @@ public class Main {
                         if (i == 0)
                             to_plot = true;
                         ArrayList<Double> currentJSDs = experiment_launcher.launch(servers[s], clients[c], skipProbability, to_plot);
+                        String filepath = "Results/s" + servers[s] + "c" + clients[c] + ".json";
+                        writeData(filepath, i, current_key, currentJSDs);
                         if (!JSDs.containsKey(current_key))
                             JSDs.put(current_key, currentJSDs);
                         else {
@@ -45,9 +52,11 @@ public class Main {
                     }
                 }
             }
-
+        }
+        if (false){
             //Al variare dello skip
             HashMap<Integer, ArrayList<Double>> JSDs_skip = new HashMap<Integer, ArrayList<Double>>();
+            Launcher experiment_launcher = new Launcher();
             for (int skip = 0; skip < skips.length; skip++) {
                 ArrayList<Double> currentJSDs = experiment_launcher.launch(server, client, skip, true);
                 JSDs_skip.put(skip, currentJSDs);

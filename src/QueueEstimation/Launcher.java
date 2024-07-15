@@ -3,6 +3,9 @@ package QueueEstimation;
 import QueueEstimation.Approximation.*;
 import Utils.*;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
@@ -19,7 +22,9 @@ public class Launcher {
         int numClients = nClients; // Tagged Customer included!
         double timeLimit = 50.0;
         double timeStep = 0.1;
-
+        if (nClients == 64){
+            timeLimit = 100.0;
+        }
         Logger.debug("Launching the experiment with " + numServers + " servers and " + numClients + " clients");
 
         // Create the servers
@@ -120,8 +125,18 @@ public class Launcher {
                 HashMap<Integer, Double> approxTransient = modelApproximator.analyzeModel();
                 if (currentEvent >= 2 && to_plot){ //perchè l'aggiornamento parte dopo aver contato 2 eventi TODO se so cambia l'if esterno cambiare anche questo
                     // Plot like Rogge-Solti
-                    String title = "CDF before vs after event" + currentEvent;
-                    ReggeSoltiPlotter CDFReggeSoltiPlotter = new ReggeSoltiPlotter(title, approxTransientBefore, approxTransient, trueTransient, offset, timeStep, "Time", " CDF", timeLimit);
+                    String title = "CDF before vs after event " + currentEvent;
+                    String folderpath = "Graphs/s"+nServers+"c"+nClients;
+                    String filename = folderpath+"/s"+nServers+"c"+nClients+"_event"+currentEvent+".png";
+                    Path path = Path.of(folderpath);
+                    if (Files.notExists(path)){
+                        try{
+                        new File(folderpath).mkdir();
+                        } catch (Exception e){
+                            Logger.debug("Error creating directory");
+                        }
+                    }
+                    ReggeSoltiPlotter CDFReggeSoltiPlotter = new ReggeSoltiPlotter(title, approxTransientBefore, approxTransient, trueTransient, offset, timeStep, "Time", " CDF", timeLimit, filename);
                     CDFReggeSoltiPlotter.setSize(800, 800);
                     CDFReggeSoltiPlotter.setLocationRelativeTo(null);
                     //PDFReggeSoltiPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -259,7 +274,17 @@ public class Launcher {
                     if (currentEvent >= 2 && to_plot) { //perchè l'aggiornamento parte dopo aver contato 2 eventi TODO se so cambia l'if esterno cambiare anche questo
                         // Plot like Rogge-Solti
                         String title = "PDF X(t | t > t_" + currentEvent + ") vs X(t)";
-                        ReggeSoltiPlotter PDFReggeSoltiPlotter = new ReggeSoltiPlotter(title, unconditionedPDF, conditionedPDF, newPDF , groundTruthPDF, offset, timeStep, "Time", " PDF", timeLimit);
+                        String folderpath = "Graphs/s"+nServers+"c"+nClients+"_conditioned_exp";
+                        String filename = folderpath+"/s"+nServers+"c"+nClients+"_PDF_X(t,t>t_"+currentEvent+")vsX(t).png";
+                        Path path = Path.of(folderpath);
+                        if (Files.notExists(path)){
+                            try{
+                                new File(folderpath).mkdir();
+                            } catch (Exception e){
+                                Logger.debug("Error creating directory");
+                            }
+                        }
+                        ReggeSoltiPlotter PDFReggeSoltiPlotter = new ReggeSoltiPlotter(title, unconditionedPDF, conditionedPDF, newPDF , groundTruthPDF, offset, timeStep, "Time", " PDF", timeLimit, filename);
                         PDFReggeSoltiPlotter.setSize(800, 800);
                         PDFReggeSoltiPlotter.setLocationRelativeTo(null);
                         //reggeSoltiPlotter.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
