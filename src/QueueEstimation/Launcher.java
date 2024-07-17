@@ -17,7 +17,7 @@ import javax.swing.*;
 
 public class Launcher {
 
-    public ArrayList<Double> launch(int nServers, int nClients, double realModelSkipProb, boolean to_plot) {
+    public ArrayList<Double> launch(int nServers, int nClients, double realModelSkipProb, boolean to_plot, String serverType) {
         int numServers = nServers;
         int numClients = nClients; // Tagged Customer included!
         double timeLimit = 50.0;
@@ -30,8 +30,13 @@ public class Launcher {
         // Create the servers
         ArrayList<Server> servers = new ArrayList<>();
         for (int i = 0; i < numServers; i++) {
-            servers.add(new ExpServer(1));
-            //servers.add(new UniServer(5, 10));
+            if (serverType.equals("exp")){
+                servers.add(new ExpServer(1));
+            } else if (serverType.equals("uni")){
+                servers.add(new UniServer(1.5, 2));
+            }else if (serverType.equals("erl")){
+                servers.add(new ErlServer(2, 1));
+            }
         }
 
         // Create the STPN model
@@ -126,7 +131,7 @@ public class Launcher {
                 if (currentEvent >= 2 && to_plot){ //perchè l'aggiornamento parte dopo aver contato 2 eventi TODO se so cambia l'if esterno cambiare anche questo
                     // Plot like Rogge-Solti
                     String title = "CDF before vs after event " + currentEvent;
-                    String folderpath = "Graphs/s"+nServers+"c"+nClients;
+                    String folderpath = "Graphs/s"+nServers+"c"+nClients+"_"+serverType;
                     String filename = folderpath+"/s"+nServers+"c"+nClients+"_event"+currentEvent+".png";
                     Path path = Path.of(folderpath);
                     if (Files.notExists(path)){
