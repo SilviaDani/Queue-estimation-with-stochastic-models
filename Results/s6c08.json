@@ -1,0 +1,252 @@
+{"experiments": [
+    {
+        "run": 0,
+        "JSD": [0.4945200517445029],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 1,
+        "JSD": [0.6669735352114186],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 2,
+        "JSD": [0.653975085762895],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 3,
+        "JSD": [0.6007940072334927],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 4,
+        "JSD": [0.654536151972154],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 5,
+        "JSD": [0.6010347442691337],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 6,
+        "JSD": [0.3922434356766999],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 7,
+        "JSD": [0.39314127553776373],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 8,
+        "JSD": [0.6555779041863116],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 9,
+        "JSD": [0.27441304046483916],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 10,
+        "JSD": [0.39384611058983116],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 11,
+        "JSD": [0.6552342512944248],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 12,
+        "JSD": [0.6919564872014423],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 13,
+        "JSD": [0.5204408228388959],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 14,
+        "JSD": [0.6920699045745711],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 15,
+        "JSD": [0.4809687292246036],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 16,
+        "JSD": [0.6914687267452326],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 17,
+        "JSD": [0.5214313518490067],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 18,
+        "JSD": [0.395534325573145],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 19,
+        "JSD": [0.5248859519566604],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 20,
+        "JSD": [0.6914689759825037],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 21,
+        "JSD": [0.5979391064644901],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 22,
+        "JSD": [0.37511942979509766],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 23,
+        "JSD": [0.3765336801173797],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 24,
+        "JSD": [0.6030396459230312],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 0,
+        "JSD": [0.6059036159288043],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 1,
+        "JSD": [0.5223299673678562],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 2,
+        "JSD": [0.6555156623416859],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 3,
+        "JSD": [0.6931481271609499],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 4,
+        "JSD": [0.6555156623416859],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 5,
+        "JSD": [0.6555156623416859],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 6,
+        "JSD": [0.6931481271608537],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 7,
+        "JSD": [0.6059036010918819],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 8,
+        "JSD": [0.6059036233471943],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 9,
+        "JSD": [0.42378729954431893],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 10,
+        "JSD": [0.39662283170278856],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 11,
+        "JSD": [0.6059036085100898],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 12,
+        "JSD": [0.5223299599494545],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 13,
+        "JSD": [0.49868387966069605],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 14,
+        "JSD": [0.4237872995441164],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 15,
+        "JSD": [0.6059036159285831],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 16,
+        "JSD": [0.6555156623416859],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 17,
+        "JSD": [0.2981030936253143],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 18,
+        "JSD": [0.6059036085103131],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 19,
+        "JSD": [0.6059036010918007],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 20,
+        "JSD": [0.6931481271607756],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 21,
+        "JSD": [0.5223299673676074],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 22,
+        "JSD": [0.52232996736782],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 23,
+        "JSD": [0.5223299673676906],
+        "key": "Servers 6, Clients 8"
+    },
+    {
+        "run": 24,
+        "JSD": [0.49877709140735815],
+        "key": "Servers 6, Clients 8"
+    }
+]}
