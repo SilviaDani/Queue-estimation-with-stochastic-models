@@ -8,7 +8,7 @@ import static Utils.JSONWriter.writeData;
 
 
 public class Main {
-    final static int REPETITIONS = 50;
+    final static int REPETITIONS = 100;
 
     //Parametri al variare del numero dei server e i client
     final static int[] servers = {1, 2, 4, 6};
@@ -111,30 +111,34 @@ public class Main {
                 }
             }
         }
+        //2
         if (!seq) {
             //In questo esperimento mettiamo a confronto la performance del modello
             HashMap<String, ArrayList<Double>> JSDs_diff = new HashMap<String, ArrayList<Double>>();
             Launcher experiment_launcher = new Launcher();
             for (int c = 0; c < conditionings.length; c++) {
-                for (int i = 0; i < REPETITIONS; i++) {
-                    Logger.debug("\nLaunching experiment " + i + " -- conditioned t-" + conditionings[c]);
-                    boolean to_plot = false;
-                    boolean alreadyComputedTrueTransient = true;
-                    if (i == 0) {
-                        to_plot = true;
-                        alreadyComputedTrueTransient = false;
+                for (int c_index = 0; c_index < clients.length; c_index++) {
+                    for (int i = 0; i < REPETITIONS; i++) {
+                        Logger.debug("\nLaunching experiment " + i + " -- conditioned t-" + conditionings[c]);
+                        boolean to_plot = false;
+                        boolean alreadyComputedTrueTransient = true;
+                        if (i == 0) {
+                            to_plot = true;
+                            alreadyComputedTrueTransient = false;
+                        }
+                        to_plot = false;
+                        ArrayList<Double> currentJSDs = experiment_launcher.launch_second_experiment(servers[0], clients[c_index], 0.1, to_plot, 50.0, alreadyComputedTrueTransient, conditionings[c]);
+                        String filepath = "Results/s" + servers[0] + "c" + clients[c_index] + "cond" + conditionings[c] + ".json";
+                        writeData(filepath, i, "s" + servers[0] + "c" + clients[c_index] + " Difference", currentJSDs);
                     }
-                    to_plot = false;
-                    ArrayList<Double> currentJSDs = experiment_launcher.launch_second_experiment(server, client, 0.1, to_plot, 50.0, alreadyComputedTrueTransient, conditionings[c]);
-                    String filepath = "Results/s" + server + "c" + client + "cond" + conditionings[c] + ".json";
-                    writeData(filepath, i, "s" + server + "c" + client + " Difference", currentJSDs);
                 }
             }
         }
+        // Changing skip prob on queue length
         if (!seq) {
             Launcher experiment_launcher = new Launcher();
             for (int c_index = 0; c_index < clients.length; c_index++){
-                for (int i = 0; i < REPETITIONS * 2; i++){
+                for (int i = 0; i < REPETITIONS; i++){
                     Logger.debug("\nLaunching experiment " + i + " -- with skip-prob depending on queue length");
                     boolean to_plot = false;
                     boolean alreadyComputedTrueTransient = true;
@@ -149,29 +153,215 @@ public class Main {
                 }
             }
         }
+        // Changing s and c
         if(seq){
             Launcher experiment_launcher = new Launcher();
             String[] distributions = {"exp", "uni", "erl"};
-            for(String dist : distributions) {
-                for (int skip_index = 0; skip_index < skips.length; skip_index++) {
+            int skip_index = 0;
+            String dist = "exp";
+            //for(String dist : distributions) {
+              //  for (int skip_index = 0; skip_index < skips.length; skip_index++) {
                     for (int c_index = 0; c_index < clients.length; c_index++) {
                         for (int s_index = 0; s_index < servers.length; s_index++) {
                             boolean to_plot = false;
                             boolean alreadyComputedTrueTransient = false;
                             for (int i = 0; i < REPETITIONS; i++) {
-                                Logger.debugMode = true;
-                                Logger.debug("\nLaunching experiment " + i + " -- checking the goodness of the analysis");
-                                Logger.debugMode = false;
-                                if (i == 0) {
-                                    alreadyComputedTrueTransient = false;
+                                try {
+                                    Logger.debugMode = true;
+                                    Logger.debug("\ns" + servers[s_index] + "c" + clients[c_index] + "skip" + skips[skip_index] + "dist" + dist);
+                                    Logger.debug("\nLaunching experiment " + i + " -- checking the goodness of the analysis - changing s and c");
+                                    Logger.debugMode = false;
+                                    if (i == 0) {
+                                        alreadyComputedTrueTransient = false;
+                                    } else {
+                                        alreadyComputedTrueTransient = true;
+                                    }
+                                    ArrayList<Double> currentJSDs = experiment_launcher.launch_jsd_at_the_end(servers[s_index], clients[c_index], skips[skip_index], to_plot, dist, alreadyComputedTrueTransient);
+                                    String filepath = "Results/s" + servers[s_index] + "c" + (clients[c_index]==8?"08":clients[c_index]) + "sp" + skips[skip_index] + dist + "_at_the_end.json";
+                                    writeData(filepath, i, "s" + servers[s_index] + "c" + clients[c_index] + "sp" + skips[skip_index] + dist + "_at_the_end", currentJSDs);
+                                }catch (Exception e){
+                                    System.err.println("error");
+                                    i--;
                                 }
-                                ArrayList<Double> currentJSDs = experiment_launcher.launch_jsd_at_the_end(servers[s_index], clients[c_index], skips[skip_index], to_plot, dist, alreadyComputedTrueTransient);
-                                String filepath = "Results/s" + servers[s_index] + "c" + clients[c_index] + "sp"+skips[skip_index]+dist+"_at_the_end.json";
-                                writeData(filepath, i, "s" + servers[s_index] + "c" + clients[c_index] + "sp"+skips[skip_index]+dist+"_at_the_end", currentJSDs);
+                            }
+                     //   }
+                    // }
+                }
+            }
+        }
+
+        if (!seq) {
+            HashMap<String, ArrayList<Double>> JSDs = new HashMap<String, ArrayList<Double>>();
+            Launcher experiment_launcher = new Launcher();
+            for (int s = 0; s < servers.length; s++) {
+                for (int c = 0; c < clients.length; c++) {
+                    String current_key = "Servers " + servers[s] + ", Clients " + clients[c];
+                    for (int i = 0; i < REPETITIONS; i++) {
+                        Logger.debugMode = true;
+                        Logger.debug("\nLaunching experiment " + i + " with " + current_key);
+                        Logger.debugMode = false;
+                        boolean to_plot = false;
+                        boolean alreadyComputedTrueTransient = true;
+                        if (i == 0) {
+                            to_plot = true;
+                            alreadyComputedTrueTransient = false;
+                        }
+                        //to_plot = false;
+                        ArrayList<Double> currentJSDs = experiment_launcher.launch(servers[s], clients[c], 0, to_plot, "exp", alreadyComputedTrueTransient);
+                        String filepath = "Results/s" + servers[s] + "c" + (clients[c]==8?"08":clients[c]) + "skip0.json";
+                        writeData(filepath, i, current_key, currentJSDs);
+                        if (!JSDs.containsKey(current_key))
+                            JSDs.put(current_key, currentJSDs);
+                        else {
+                            ArrayList<Double> stored_JSDs = JSDs.get(current_key);
+                            for (int l = 0; l < stored_JSDs.size(); l++) {
+                                double _stored_JSD_l = stored_JSDs.get(l) + currentJSDs.get(l);
+                                stored_JSDs.set(l, _stored_JSD_l);
+                                JSDs.put(current_key, stored_JSDs);
                             }
                         }
                     }
                 }
+            }
+        }
+
+        // Prob 0
+        if(seq){
+            Launcher experiment_launcher = new Launcher();
+                    int s_index = 0;
+                    for (int c_index = 0; c_index < clients.length; c_index++) {
+                       //for (int s_index = 0; s_index < servers.length; s_index++) {
+                            boolean to_plot = false;
+                            boolean alreadyComputedTrueTransient = false;
+                            for (int i = 0; i < REPETITIONS; i++) {
+                                try {
+                                    Logger.debugMode = true;
+                                    Logger.debug("\nLaunching experiment " + i + " -- checking the goodness of the analysis - changing s and c with fixed 0 skip prob");
+                                    Logger.debugMode = false;
+                                    if (i == 0) {
+                                        alreadyComputedTrueTransient = false;
+                                    } else {
+                                        alreadyComputedTrueTransient = true;
+                                    }
+                                    ArrayList<Double> currentJSDs = experiment_launcher.launch_jsd_at_the_end(servers[s_index], clients[c_index], 0, to_plot, "exp", alreadyComputedTrueTransient);
+                                    String filepath = "Results/s" + servers[s_index] + "c" + (clients[c_index]==8?"08":clients[c_index]) + "sp" + 0 + "exp" + "_at_the_end.json";
+                                    writeData(filepath, i, "s" + servers[s_index] + "c" + clients[c_index] + "sp" + 0 + "exp" + "_at_the_end", currentJSDs);
+                                }catch (Exception e){
+                                    System.err.println("errore!");
+                                    System.err.println("ora ci si riprova");
+                                    i--;
+                                }
+                            }
+                        //}
+            }
+        }
+        //0
+        if(!seq){
+            Launcher experiment_launcher = new Launcher();
+            String[] distributions = {"exp", "uni", "erl"};
+            String dist = "exp";
+            //for(String dist : distributions) {
+                for (int skip_index = 1; skip_index < skips.length; skip_index++) {
+                    for (int c_index = 0; c_index < clients.length; c_index++) {
+                        //for (int s_index = 0; s_index < servers.length; s_index++) {
+                            int s_index = 0;
+                            boolean to_plot = false;
+                            boolean alreadyComputedTrueTransient = false;
+                            for (int i = 0; i < REPETITIONS; i++) {
+                                try {
+                                    Logger.debugMode = true;
+                                    Logger.debug("\nLaunching experiment " + i + " -- checking the goodness of the analysis - changing c and skip prob");
+                                    Logger.debugMode = false;
+                                    if (i == 0) {
+                                        alreadyComputedTrueTransient = false;
+                                    } else {
+                                        alreadyComputedTrueTransient = true;
+                                    }
+                                    ArrayList<Double> currentJSDs = experiment_launcher.launch_jsd_at_the_end(servers[s_index], clients[c_index], skips[skip_index], to_plot, dist, alreadyComputedTrueTransient);
+                                    String filepath = "Results/s" + servers[s_index] + "c" + (clients[c_index]==8?"08":clients[c_index]) + "sp" + skips[skip_index] + dist + "_at_the_end.json";
+                                    writeData(filepath, i, "s" + servers[s_index] + "c" + clients[c_index] + "sp" + skips[skip_index] + dist + "_at_the_end", currentJSDs);
+                                    //  }
+                                }catch (Exception e){
+                                    System.err.println("errore!");
+                                    System.err.println("ci si riprova, dai");
+                                    i--;
+                                }
+                            }
+                    }
+               // }
+            }
+        }
+        //1
+        if(!seq){
+            Launcher experiment_launcher = new Launcher();
+            String[] distributions = {"exp2", "uni", "erl"};
+            int skip_index = 0;
+            for(String dist : distributions) {
+            //for (int skip_index = 1; skip_index < skips.length; skip_index++) {
+                for (int c_index = 0; c_index < clients.length; c_index++) {
+                    //for (int s_index = 0; s_index < servers.length; s_index++) {
+                    int s_index = 0;
+                    boolean to_plot = false;
+                    boolean alreadyComputedTrueTransient = false;
+                    for (int i = 0; i < REPETITIONS; i++) {
+                        try {
+                            Logger.debugMode = true;
+                            Logger.debug("\nLaunching experiment " + i + " -- checking the goodness of the analysis - changing distribution");
+                            Logger.debugMode = false;
+                            if (i == 0) {
+                                alreadyComputedTrueTransient = false;
+                            } else {
+                                alreadyComputedTrueTransient = true;
+                            }
+                            ArrayList<Double> currentJSDs = experiment_launcher.launch_jsd_at_the_end(servers[s_index], clients[c_index], skips[skip_index], to_plot, dist, alreadyComputedTrueTransient);
+                            String filepath = "Results/s" + servers[s_index] + "c" + ((clients[c_index]==8)?"08":clients[c_index]) + "sp" + skips[skip_index] + dist + "_at_the_end.json";
+                            writeData(filepath, i, "s" + servers[s_index] + "c" + clients[c_index] + "sp" + skips[skip_index] + dist + "_at_the_end", currentJSDs);
+                            //  }
+                        }catch (Exception e){
+                            System.err.println(e.getMessage());
+                            System.err.println("Lets try again :P");
+                            i--;
+                        }
+                    }
+                }
+                // }
+            }
+        }
+
+        // Skip Prob Queue Dependant JSD at the end
+        if(!seq){
+            Launcher experiment_launcher = new Launcher();
+            String[] distributions = {"exp", "uni", "erl"};
+            String dist = "exp";
+            //for(String dist : distributions) {
+           // for (int skip_index = 1; skip_index < skips.length; skip_index++) {
+                for (int c_index = 0; c_index < clients.length; c_index++) {
+                    //for (int s_index = 0; s_index < servers.length; s_index++) {
+                    int s_index = 0;
+                    boolean to_plot = false;
+                    boolean alreadyComputedTrueTransient = false;
+                    for (int i = 0; i < REPETITIONS; i++) {
+                        try {
+                            Logger.debugMode = true;
+                            Logger.debug("\nLaunching experiment " + i + " -- checking the goodness of the analysis - skip prob dep. on queue size");
+                            Logger.debugMode = false;
+                            if (i == 0) {
+                                alreadyComputedTrueTransient = false;
+                            } else {
+                                alreadyComputedTrueTransient = true;
+                            }
+                            ArrayList<Double> currentJSDs = experiment_launcher.launch_jsd_at_the_end_skip_prob_queue_dependant(servers[s_index], clients[c_index], -1, to_plot, dist, alreadyComputedTrueTransient);
+                            String filepath = "Results/s" + servers[s_index] + "c" + (clients[c_index]==8?"08":clients[c_index]) + "sp" + "_queue_" + dist + "_at_the_end.json";
+                            writeData(filepath, i, "s" + servers[s_index] + "c" + clients[c_index] + "sp" + "_queue_" + dist + "_at_the_end", currentJSDs);
+                            //  }
+                        }catch (Exception e){
+                            System.err.println("errore!");
+                            System.err.println("ci si riprova, dai");
+                            i--;
+                        }
+                    }
+                //}
+                // }
             }
         }
         Logger.debug("Done");

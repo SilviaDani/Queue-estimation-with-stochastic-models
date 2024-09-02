@@ -171,6 +171,9 @@ public class Launcher {
         int numClients = nClients; // Tagged Customer included!
         double timeLimit = tL;
         double timeStep = 0.1;
+        if (numClients > 50){
+            timeLimit = 100;
+        }
 
         Logger.debug("Launching the experiment with " + numServers + " servers and " + numClients + " clients");
 
@@ -493,10 +496,13 @@ public class Launcher {
     public ArrayList<Double> launch_jsd_at_the_end(int nServers, int nClients, double realModelSkipProb, boolean to_plot, String serverType, boolean realTransientAlreadyComputed) {
         int numServers = nServers;
         int numClients = nClients; // Tagged Customer included!
-        double timeLimit = 50.0;
+        double timeLimit = 100.0;
         double timeStep = 0.1;
-        if (nClients == 64){
+        if (nClients == 32 && serverType.equals("uni")){
             timeLimit = 100.0;
+        }
+        if (nClients == 64){
+            timeLimit = 200.0;
         }
         Logger.debug("Launching the experiment with " + numServers + " servers and " + numClients + " clients");
 
@@ -509,6 +515,8 @@ public class Launcher {
                 servers.add(new UniServer(1.5, 2));
             }else if (serverType.equals("erl")){
                 servers.add(new ErlServer(2, 1));
+            } else if (serverType.equals("exp2")){
+                servers.add(new ExpServer(2));
             }
         }
 
@@ -582,6 +590,226 @@ public class Launcher {
         } else {
             modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, numClients, numServers, skipProb, timeLimit, timeStep, offset));
         }
+        HashMap<Integer, Double> approxTransient = modelApproximator.analyzeModel();
+        double jsd = JensenShannonDivergence.computeJensenShannonDivergence(ConverterCDFToPDF.convertCDFToPDF(trueTransient), ConverterCDFToPDF.convertCDFToPDF(approxTransient));
+        JSDs.add(jsd);
+
+        // print the JSDs
+        for (int i = 0; i < JSDs.size(); i++) {
+            Logger.debug("JSD " + (i+1) + ": " + JSDs.get(i));
+        }
+        System.out.println("CV: " + cv);
+        System.out.println("JSD: " + JSDs.get(0));
+        return JSDs;
+    }
+
+    public ArrayList<Double> launch_jsd_at_the_end_skip_prob_queue_dependant(int nServers, int nClients, double realModelSkipProb, boolean to_plot, String serverType, boolean realTransientAlreadyComputed) {
+        int numServers = nServers;
+        int numClients = nClients; // Tagged Customer included!
+        double timeLimit = 50.0;
+        double timeStep = 0.1;
+        if (nClients == 32 && serverType.equals("uni")){
+            timeLimit = 100.0;
+        }
+        if (nClients == 64){
+            timeLimit = 150.0;
+        }
+        Logger.debug("Launching the experiment with " + numServers + " servers and " + numClients + " clients");
+
+        // Create the servers
+        ArrayList<Server> servers = new ArrayList<>();
+        for (int i = 0; i < numServers; i++) {
+            if (serverType.equals("exp")){
+                servers.add(new ExpServer(1));
+            } else if (serverType.equals("uni")){
+                servers.add(new UniServer(1.5, 2));
+            }else if (serverType.equals("erl")){
+                servers.add(new ErlServer(2, 1));
+            }
+        }
+
+        // Create the STPN model
+        STPN stpn = new STPN(servers, numClients,timeLimit, timeStep, -1);
+        ApproxParser approxParser = new ApproxParser();
+        if (!realTransientAlreadyComputed) {
+            try {
+                trueTransient = stpn.makeModelwithSkipProbabiliyDependingOnQueue();
+            } catch (Exception e) {
+                System.out.println("Error creating the model");
+            }
+        }
+        stpn.runSimulation();
+        ModelApproximator modelApproximator = new ModelApproximator();
+        ArrayList<Event> events = Parser.parse("log.txt", numServers);
+
+        // Troviamo il reale tempo di attesa e il tempo di ciascun evento per il plot
+        ArrayList<Event> filteredEvents = new ArrayList(); // arraylist di soli eventi fine servizio e skip
+        for (int currentEvent = 0; currentEvent < events.size(); currentEvent++) {
+            Event curEvent = events.get(currentEvent);
+            if (curEvent instanceof EndService || curEvent instanceof LeaveQueue) {
+                filteredEvents.add(curEvent);
+            }
+            if ((curEvent instanceof StartService || curEvent instanceof LeaveQueue) && Objects.equals(curEvent.clientID, String.valueOf(numClients - 1))){
+                filteredEvents.add(new TaggedCustomerBeingProcessed(curEvent.eventTime, curEvent.serverID, curEvent.clientID));
+            }
+        }
+
+        double realWaitingTime = filteredEvents.getLast().eventTime;
+
+        // Stimiamo il tempo di attesa con la rete approssimata ad ogni evento di fine o skip
+        ArrayList<Double> obsTimes = new ArrayList(); // X axis of the plot
+        ArrayList<Double> estimations = new ArrayList();
+        ArrayList<Double> stds = new ArrayList();
+
+        HashMap<Integer, Double> approxTransientBefore = null;
+        ArrayList<Double> JSDs = new ArrayList(); // it starts from 1 because we need at least 2 events to compute the mean and variance
+
+        // "train" 🚄 the model
+        DescriptiveStatistics serviceStats = new DescriptiveStatistics();
+        double skipProb = 0.0;
+        for (int currentEvent = 0; currentEvent < filteredEvents.size(); currentEvent++){
+            Event event = filteredEvents.get(currentEvent);
+            if (event instanceof EndService) {
+                serviceStats.addValue(event.relativeEventTime);
+            } else if (event instanceof LeaveQueue) {
+                skipProb += 1.0;
+            }
+        }
+        double mean;
+        double variance;
+        if (serviceStats.getN() == 0) {
+            Logger.debug("No service events found, skipping...");
+            mean = 1e-6;
+            variance = 1e-6 / (numServers * numServers);
+        }else{
+            mean = (serviceStats.getMean() / numServers) + 1e-6;
+            variance = (serviceStats.getVariance() + 1e-6) / (numServers * numServers);
+        }
+        double cv = Math.sqrt(variance) / mean;
+        skipProb /= filteredEvents.size();
+        Logger.debug("Mean: " + mean + "\nVariance: " + variance + "\nCV: " + cv + "\nSkip probability: " + skipProb);
+        double offset = 0;
+        if (cv - 1 > 1E-6) {
+            modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, numClients, numServers, skipProb, timeLimit, timeStep, offset));
+        } else if (Math.abs(cv - 1) <= 1E-6) {
+            modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, numClients, skipProb, timeLimit, timeStep, offset));
+        } else if (cv < 1 && cv * cv > 0.5) {
+            modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, numClients, numServers, skipProb, timeLimit, timeStep, offset));
+        } else {
+            modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, numClients, numServers, skipProb, timeLimit, timeStep, offset));
+        }
+        System.out.println("CV: " + cv);
+        HashMap<Integer, Double> approxTransient = modelApproximator.analyzeModel();
+        double jsd = JensenShannonDivergence.computeJensenShannonDivergence(ConverterCDFToPDF.convertCDFToPDF(trueTransient), ConverterCDFToPDF.convertCDFToPDF(approxTransient));
+        JSDs.add(jsd);
+
+        // print the JSDs
+        for (int i = 0; i < JSDs.size(); i++) {
+            Logger.debug("JSD " + (i+1) + ": " + JSDs.get(i));
+        }
+        return JSDs;
+    }
+
+    public ArrayList<Double> launch_jsd_at_the_end_train(int nServers, int nClients, double realModelSkipProb, boolean to_plot, String serverType, boolean realTransientAlreadyComputed) {
+        int numServers = nServers;
+        int numClients = nClients; // Tagged Customer included!
+        double timeLimit = 50.0;
+        double timeStep = 0.1;
+        if (nClients == 32 && serverType.equals("uni")){
+            timeLimit = 100.0;
+        }
+        if (nClients == 64){
+            timeLimit = 150.0;
+        }
+        Logger.debug("Launching the experiment with " + numServers + " servers and " + numClients + " clients");
+
+        // Create the servers
+        ArrayList<Server> servers = new ArrayList<>();
+        for (int i = 0; i < numServers; i++) {
+            if (serverType.equals("exp")){
+                servers.add(new ExpServer(1));
+            } else if (serverType.equals("uni")){
+                servers.add(new UniServer(1.5, 2));
+            }else if (serverType.equals("erl")){
+                servers.add(new ErlServer(2, 1));
+            }
+        }
+
+        // Create the STPN model
+        STPN stpn = new STPN(servers, numClients,timeLimit, timeStep, realModelSkipProb);
+        ApproxParser approxParser = new ApproxParser();
+        if (!realTransientAlreadyComputed) {
+            try {
+                trueTransient = stpn.makeModel();
+            } catch (Exception e) {
+                System.out.println("Error creating the model");
+            }
+        }
+        ModelApproximator modelApproximator = new ModelApproximator();
+        ArrayList<Double> JSDs = new ArrayList(); // it starts from 1 because we need at least 2 events to compute the mean and variance
+        DescriptiveStatistics serviceStats = new DescriptiveStatistics();
+        int events_seen = 0;
+        double skipProb = 0.0;
+        for (int training_it = 0; training_it < 100; training_it++) {
+            stpn.runSimulation();
+
+            ArrayList<Event> events = Parser.parse("log.txt", numServers);
+
+            // Troviamo il reale tempo di attesa e il tempo di ciascun evento per il plot
+            ArrayList<Event> filteredEvents = new ArrayList(); // arraylist di soli eventi fine servizio e skip
+            for (int currentEvent = 0; currentEvent < events.size(); currentEvent++) {
+                Event curEvent = events.get(currentEvent);
+                if (curEvent instanceof EndService || curEvent instanceof LeaveQueue) {
+                    filteredEvents.add(curEvent);
+                }
+                if ((curEvent instanceof StartService || curEvent instanceof LeaveQueue) && Objects.equals(curEvent.clientID, String.valueOf(numClients - 1))) {
+                    filteredEvents.add(new TaggedCustomerBeingProcessed(curEvent.eventTime, curEvent.serverID, curEvent.clientID));
+                }
+            }
+
+            double realWaitingTime = filteredEvents.getLast().eventTime;
+
+            // Stimiamo il tempo di attesa con la rete approssimata ad ogni evento di fine o skip
+            ArrayList<Double> obsTimes = new ArrayList(); // X axis of the plot
+            ArrayList<Double> estimations = new ArrayList();
+            ArrayList<Double> stds = new ArrayList();
+
+            HashMap<Integer, Double> approxTransientBefore = null;
+
+            // "train" 🚄 the model
+            for (int currentEvent = 0; currentEvent < filteredEvents.size(); currentEvent++) {
+                Event event = filteredEvents.get(currentEvent);
+                if (event instanceof EndService) {
+                    serviceStats.addValue(event.relativeEventTime);
+                } else if (event instanceof LeaveQueue) {
+                    skipProb += 1.0;
+                }
+            }
+            events_seen += filteredEvents.size();
+        }
+            double mean;
+            double variance;
+            if (serviceStats.getN() == 0) {
+                Logger.debug("No service events found, skipping...");
+                mean = 1e-6;
+                variance = 1e-6 / (numServers * numServers);
+            } else {
+                mean = (serviceStats.getMean() / numServers) + 1e-6;
+                variance = (serviceStats.getVariance() + 1e-6) / (numServers * numServers);
+            }
+            double cv = Math.sqrt(variance) / mean;
+            skipProb /= events_seen;
+            Logger.debug("Mean: " + mean + "\nVariance: " + variance + "\nCV: " + cv + "\nSkip probability: " + skipProb);
+            double offset = 0;
+            if (cv - 1 > 1E-6) {
+                modelApproximator.setModelApproximation(new HyperExponentialModelApproximation(mean, variance, numClients, numServers, skipProb, timeLimit, timeStep, offset));
+            } else if (Math.abs(cv - 1) <= 1E-6) {
+                modelApproximator.setModelApproximation(new ExponentialModelApproximation(mean, variance, numClients, skipProb, timeLimit, timeStep, offset));
+            } else if (cv < 1 && cv * cv > 0.5) {
+                modelApproximator.setModelApproximation(new HypoExponentialModelApproximation(mean, variance, numClients, numServers, skipProb, timeLimit, timeStep, offset));
+            } else {
+                modelApproximator.setModelApproximation(new LowCVHypoExponentialModelApproximation(mean, variance, numClients, numServers, skipProb, timeLimit, timeStep, offset));
+            }
         HashMap<Integer, Double> approxTransient = modelApproximator.analyzeModel();
         double jsd = JensenShannonDivergence.computeJensenShannonDivergence(ConverterCDFToPDF.convertCDFToPDF(trueTransient), ConverterCDFToPDF.convertCDFToPDF(approxTransient));
         JSDs.add(jsd);
